@@ -33,3 +33,14 @@ export interface PreserveShuffleState {
   questionsShuffled: boolean;
   optionsShuffled: boolean;
 }
+
+export interface QuizSet {
+  id: string;
+  title: string;
+  urls: string[];
+  progress: number;
+  total_questions: number;
+  score: number;
+  attempts: number;
+  average_score: number | null;
+}

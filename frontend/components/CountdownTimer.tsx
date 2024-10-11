@@ -13,7 +13,7 @@ const CountdownTimer = () => {
 
   // Calculate the countdown timer
   const calculateCountdown = () => {
-    const targetDate = new Date('April 11, 2024, 00:00:00').getTime();
+    const targetDate = new Date('October 19, 2024, 00:00:00').getTime();
     const now = new Date().getTime();
     const distance = targetDate - now;
 

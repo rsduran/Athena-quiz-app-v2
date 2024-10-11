@@ -55,48 +55,42 @@ def home():
 @app.route('/api/startScraping', methods=['POST'])
 def start_scraping():
     data = request.json
-    quiz_title = data.get('title', 'New Quiz Set')  # Retrieve the title from the request data
-    new_quiz_set = QuizSet(title=quiz_title)  # Create a new quiz set object
-    db.session.add(new_quiz_set)  # Add the new quiz set to the database
-    db.session.commit()  # Commit the changes to generate an ID for the quiz set
+    quiz_title = data.get('title', 'New Quiz Set')
+    raw_urls = data.get('rawUrls', '')
+    urls_input = data.get('urls', [])
+    new_quiz_set = QuizSet(title=quiz_title, raw_urls=raw_urls, urls=json.dumps(urls_input))
+    db.session.add(new_quiz_set)
+    db.session.commit()
 
-    global_question_counter = 1  # Initialize the global question counter
+    global_question_counter = 1
 
-    # Sequentially process each URL set to maintain order and ensure no overlaps
+    # Process URLs and add questions
     for url_set in data['urls']:
         if isinstance(url_set, dict):
-            base_url = url_set.get('base_url', '')  # Extract the base URL
-
+            base_url = url_set.get('base_url', '')
             if 'indiabix' in base_url:
                 start_url = int(url_set.get('start_url', 1))
                 end_url = int(url_set.get('end_url', start_url))
                 for url_number in range(start_url, end_url + 1):
-                    global_question_counter = process_question(base_url, url_number, global_question_counter, new_quiz_set.id)  # Passing quiz_set_id
-
+                    global_question_counter = process_question(base_url, url_number, global_question_counter, new_quiz_set.id)
             elif 'pinoybix' in base_url:
-                global_question_counter = process_pinoybix_question(base_url, global_question_counter, new_quiz_set.id, db, Question)  # Passing quiz_set_id
-
+                global_question_counter = process_pinoybix_question(base_url, global_question_counter, new_quiz_set.id, db, Question)
             elif 'examveda' in base_url:
                 start_page = int(url_set.get('start_page', 1))
                 end_page = int(url_set.get('end_page', 10))
-                global_question_counter = process_examveda_question(base_url, start_page, end_page, global_question_counter, new_quiz_set.id, db, Question)  # Passing quiz_set_id
-
+                global_question_counter = process_examveda_question(base_url, start_page, end_page, global_question_counter, new_quiz_set.id, db, Question)
             elif 'web.archive.org' in base_url:
-                global_question_counter = process_examprimer_question(base_url, global_question_counter, new_quiz_set.id, db, Question)  # Passing quiz_set_id
-
+                global_question_counter = process_examprimer_question(base_url, global_question_counter, new_quiz_set.id, db, Question)
         elif isinstance(url_set, str):
             if "pinoybix" in url_set:
-                global_question_counter = process_pinoybix_question(url_set, global_question_counter, new_quiz_set.id, db, Question)  # Passing quiz_set_id
+                global_question_counter = process_pinoybix_question(url_set, global_question_counter, new_quiz_set.id, db, Question)
             elif "indiabix" in url_set:
-                global_question_counter = process_question(url_set, global_question_counter, new_quiz_set.id)  # Passing quiz_set_id
+                global_question_counter = process_question(url_set, global_question_counter, new_quiz_set.id)
             elif "examveda" in url_set:
-                global_question_counter = process_examveda_question(url_set, 1, 10, global_question_counter, new_quiz_set.id, db, Question)  # Passing quiz_set_id
+                global_question_counter = process_examveda_question(url_set, 1, 10, global_question_counter, new_quiz_set.id, db, Question)
             elif "web.archive.org" in url_set:
-                global_question_counter = process_examprimer_question(url_set, global_question_counter, new_quiz_set.id, db, Question)  # Passing quiz_set_id
+                global_question_counter = process_examprimer_question(url_set, global_question_counter, new_quiz_set.id, db, Question)
 
-        db.session.commit()  # After processing each URL set, commit the changes
-
-    # Return a success message
     return jsonify({"message": "Scraping completed.", "quiz_set_id": str(new_quiz_set.id)}), 200
 
 @app.route('/api/getQuestionsByQuizSet/<string:quiz_set_id>', methods=['GET'])
@@ -122,10 +116,33 @@ def get_questions_by_quiz_set(quiz_set_id):
 @app.route('/api/getQuizSets', methods=['GET'])
 def get_quiz_sets():
     quiz_sets = QuizSet.query.all()
-    return jsonify([{
-        'id': quiz_set.id,  # Keep id as UUID string
-        'title': quiz_set.title
-    } for quiz_set in quiz_sets])
+    result = []
+    for quiz_set in quiz_sets:
+        questions = Question.query.filter_by(quiz_set_id=quiz_set.id).all()
+        answered_questions = [q for q in questions if q.user_selected_option is not None]
+
+        # Set progress to 100% if the quiz has been submitted
+        progress = 100 if quiz_set.attempts > 0 else (len(answered_questions) / len(questions) * 100 if questions else 0)
+
+        # Use the relationship to get attempts
+        attempts = quiz_set.attempts_list
+        total_score = sum(attempt.score for attempt in attempts)
+        average_score = total_score / len(attempts) if attempts else None
+
+        # Get the latest score
+        latest_score = attempts[-1].score if attempts else 0
+
+        result.append({
+            'id': quiz_set.id,
+            'title': quiz_set.title,
+            'urls': json.loads(quiz_set.urls) if quiz_set.urls else [],
+            'progress': round(progress),
+            'total_questions': len(questions),
+            'score': latest_score,
+            'attempts': len(attempts),
+            'average_score': round(average_score, 2) if average_score is not None else None
+        })
+    return jsonify(result)
 
 @app.route('/api/renameQuizSet/<string:quiz_set_id>', methods=['PUT'])
 def rename_quiz_set(quiz_set_id):
@@ -288,10 +305,12 @@ def get_quiz_set_details(quiz_set_id):
     return jsonify({
         'id': quiz_set.id,
         'title': quiz_set.title,
-        'urls': [q.url for q in questions],
+        'urls': json.loads(quiz_set.urls) if quiz_set.urls else [],
         'progress': round(progress),
         'total_questions': len(questions),
-        'answered_questions': len(answered_questions)
+        'answered_questions': len(answered_questions),
+        'score': quiz_set.score,
+        'attempts': quiz_set.attempts
     })
 
 @app.route('/api/getQuizSetScore/<string:quiz_set_id>', methods=['GET'])
@@ -317,9 +336,15 @@ def update_quiz_set_score(quiz_set_id):
     if not quiz_set:
         return jsonify({'message': 'Quiz set not found'}), 404
 
-    # Update the score in the database
-    quiz_set.score = score
+    # Create a new Attempt
+    new_attempt = Attempt(quiz_set_id=quiz_set_id, score=score)
+    db.session.add(new_attempt)
+
+    # Update attempts count
+    quiz_set.attempts += 1
     db.session.commit()
+
+    print(f"New attempt recorded for quiz_set_id {quiz_set_id}. Total attempts: {quiz_set.attempts}")
 
     return jsonify({"message": "Score updated successfully"}), 200
 
@@ -561,3 +586,10 @@ def delete_all_quiz_sets():
     except Exception as e:
         db.session.rollback()
         return jsonify({'message': f'Error deleting all quiz sets: {str(e)}'}), 500
+
+@app.route('/api/getRawUrls/<string:quiz_set_id>', methods=['GET'])
+def get_raw_urls(quiz_set_id):
+    quiz_set = QuizSet.query.get(quiz_set_id)
+    if quiz_set:
+        return jsonify({"rawUrls": quiz_set.raw_urls}), 200
+    return jsonify({"message": "Quiz set not found"}), 404

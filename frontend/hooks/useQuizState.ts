@@ -503,6 +503,28 @@ const useQuizState = () => {
     }
   };
 
+  const submitQuiz = async () => {
+    // Calculate the score
+    const correctAnswers = questions.filter(q => q.userSelectedOption === q.answer).length;
+    const totalQuestions = questions.length;
+    const score = correctAnswers;
+
+    // Send the score to the backend
+    try {
+      await fetch(`${backendUrl}/updateQuizSetScore/${id}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ score }),
+      });
+
+      // Optionally, fetch updated quiz sets to refresh data
+      // You can call fetchQuizSets() here if you have access to it
+      console.log('Score submitted successfully');
+    } catch (error) {
+      console.error('Error updating quiz set score:', error);
+    }
+  };
+
   useEffect(() => {
     fetchEyeIconState();
   }, [fetchEyeIconState]);
@@ -630,6 +652,7 @@ const useQuizState = () => {
       setEyeIconState,
       setOptionsShuffled,
       setPreserveShuffleState,
+      submitQuiz,
       toggleColorMode,
       onSearchModalOpen,
       onSearchModalClose,

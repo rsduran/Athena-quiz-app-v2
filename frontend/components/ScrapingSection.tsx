@@ -41,8 +41,9 @@ const ScrapingSection: React.FC<ScrapingSectionProps> = ({ onScrapeComplete, qui
   
     setIsScraping(true);
   
-    const lines = scrapeInput.split('\n');
-    let urls = lines
+    const rawUrls = scrapeInput;
+    const lines = rawUrls.split('\n');
+    let processedUrls = lines
       .map(line => {
         console.log("Processing line:", line);
         line = line.trim();
@@ -70,15 +71,20 @@ const ScrapingSection: React.FC<ScrapingSectionProps> = ({ onScrapeComplete, qui
       })
       .filter(line => line); // Remove null or empty lines
   
-    console.log("Final URLs sent to Backend:", JSON.stringify(urls, null, 2));
+    console.log("Raw URLs:", rawUrls);
+    console.log("Processed URLs sent to Backend:", JSON.stringify(processedUrls, null, 2));
   
     try {
       const response = await fetch(`${backendUrl}/startScraping`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title: quizSetTitle, urls }),
+        body: JSON.stringify({ 
+          title: quizSetTitle, 
+          rawUrls: scrapeInput,
+          urls: processedUrls 
+        }),
       });
-  
+      
       if (!response.ok) {
         throw new Error(`Error: ${response.statusText}`);
       }
@@ -135,7 +141,7 @@ const ScrapingSection: React.FC<ScrapingSectionProps> = ({ onScrapeComplete, qui
   return (
     <Box>
       <Textarea
-        placeholder="Input URLs here. For Indiabix: [base_url], [start_url], [end_url]. For Pinoybix: [url]"
+        placeholder={`Sample IndiaBix URL:\nhttps://www.indiabix.com/electronics-and-communication-engineering/power-electronics/, 076001, 076010\n\nSample Examveda URL:\nhttps://www.examveda.com/non-verbal-reasoning/practice-mcq-question-on-mirror-images/, ?page=1, ?page=6\n\nSample PinoyBix URL:\nhttps://pinoybix.org/2019/08/mcq-in-operational-amplifier-floyd.html?__im-TCIRkVzL=12394515221565126198`}
         mb={4}
         value={scrapeInput}
         onChange={(e) => setScrapeInput(e.target.value)}
