@@ -9,6 +9,7 @@ class QuizSet(db.Model):
     questions = db.relationship('Question', backref='quiz_set', lazy=True)
     eye_icon_state = db.Column(db.Boolean, default=True) 
     lock_state = db.Column(db.Boolean, default=True)
+    questions = db.relationship('Question', backref='quiz_set', lazy=True, cascade="all, delete-orphan")
 
 class Question(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -24,6 +25,7 @@ class Question(db.Model):
     order = db.Column(db.Integer, nullable=False)  # Ensure this field is not nullable
     further_explanation = db.relationship('FurtherExplanation', backref='question', lazy=True)
     discussion_comments = db.Column(db.Text)
+    further_explanation = db.relationship('FurtherExplanation', backref='question', lazy=True, cascade="all, delete-orphan")
 
 class EditorContent(db.Model):
     id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))

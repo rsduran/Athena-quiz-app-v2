@@ -25,21 +25,35 @@ const transformMathContent = (content: string): string => {
   return transformedContent;
 };
 
-const processTextForImages = (text: string, baseUrl: string = "https://www.indiabix.com"): string => {
+const processTextForImages = (
+  text: string,
+  isOption: boolean,
+  baseUrl: string = "https://www.indiabix.com"
+): string => {
   let processedText: string = text;
 
-  // Use a generic image pattern to find all img tags in the text
-  const imagePattern: RegExp = /<img.*?src="(.*?)".*?>/gi;
-  processedText = processedText.replace(imagePattern, (match: string, imgUrl: string): string => {
-    // Check if the imgUrl is a relative path (i.e., starts with '/')
-    if (imgUrl.startsWith('/')) {
-      // Prepend the base URL if it's a relative path
-      imgUrl = `${baseUrl}${imgUrl}`;
-    }
+  if (isOption) {
+    // Remove any leading <br> tags in options
+    processedText = processedText.replace(/^(\s*<br\s*\/?>)+/gi, '');
+  }
 
-    // Replace the image tag with the complete image URL
-    return `<img src="${imgUrl}" alt="Image" style="display: inline-block; width: auto; height: auto;">`;
-  });
+  const imagePattern: RegExp = /<img[^>]*src="([^"]*)"[^>]*>/gi;
+  processedText = processedText.replace(
+    imagePattern,
+    (match: string, imgUrl: string): string => {
+      if (imgUrl.startsWith('/')) {
+        imgUrl = `${baseUrl}${imgUrl}`;
+      }
+
+      if (isOption) {
+        // For options, adjust the image styling
+        return `<img src="${imgUrl}" alt="Image" style="display: inline-block; vertical-align: middle; margin: 0; width: auto; height: auto;">`;
+      } else {
+        // For question text, keep the centering
+        return `<div style="text-align: center;"><img src="${imgUrl}" alt="Image" style="display: block; margin: 0 auto; width: auto; height: auto;"></div>`;
+      }
+    }
+  );
 
   return processedText;
 };
@@ -70,8 +84,9 @@ const QuestionDisplay = ({
   };
 
   const processedQuestion = processTextForImages(
-    transformMathContent(question.question || 'Question')
-  );
+    transformMathContent(question.question || 'Question'),
+    false
+  );  
 
   return (
     <Box borderWidth="1px" borderRadius="lg" p={4} bg={cardBgColor} color={cardTextColor}>
@@ -90,7 +105,7 @@ const QuestionDisplay = ({
         const isSelected = selectedOption === optionLabel;
 
         const transformedOption = transformMathContent(option);
-        const processedOption = processTextForImages(transformedOption);
+        const processedOption = processTextForImages(transformedOption, true);
 
         return (
           <Box
@@ -107,9 +122,11 @@ const QuestionDisplay = ({
             color={isSelected ? selectedTextColor : unselectedTextColor}
             _hover={{ borderColor: selectedBorderColor }}
             fontSize={optionFontSize}
+            display="flex"
+            alignItems="center"
           >
             <MathJax dynamic>
-              <div dangerouslySetInnerHTML={{ __html: processedOption }} />
+              <div dangerouslySetInnerHTML={{ __html: processedOption }} style={{ width: '100%' }} />
             </MathJax>
           </Box>
         );

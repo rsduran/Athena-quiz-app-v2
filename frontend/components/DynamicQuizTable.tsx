@@ -26,6 +26,7 @@ import {
   Text,
   Stack,
   useBreakpointValue,
+  useToast,
 } from '@chakra-ui/react';
 import {
   AlertDialog,
@@ -80,6 +81,9 @@ const DynamicQuizTable = () => {
   const [deleteQuizSetId, setDeleteQuizSetId] = useState<string | null>(null);
   const cancelRef = React.useRef<HTMLButtonElement>(null);
   const [isLocked, setIsLocked] = useState(true);
+  const [isDeleteMultipleAlertOpen, setIsDeleteMultipleAlertOpen] = useState(false);
+  const [isDeleteAllAlertOpen, setIsDeleteAllAlertOpen] = useState(false);
+  const toast = useToast();
   const backendUrl = getBackendUrl();
 
   // Determine if we're on a mobile device
@@ -354,6 +358,82 @@ const DynamicQuizTable = () => {
     }
   };
 
+  const handleDeleteMultipleQuizSets = async () => {
+    const selectedQuizSetIds = Object.keys(checkedItems).filter(id => checkedItems[id]);
+    if (selectedQuizSetIds.length === 0) {
+      toast({
+        title: "No quiz sets selected",
+        description: "Please select at least one quiz set to delete.",
+        status: "warning",
+        duration: 3000,
+        isClosable: true,
+      });
+      return;
+    }
+
+    try {
+      const response = await fetch(`${backendUrl}/deleteMultipleQuizSets`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ quizSetIds: selectedQuizSetIds }),
+      });
+      if (response.ok) {
+        setQuizSets(quizSets.filter(qs => !selectedQuizSetIds.includes(qs.id)));
+        setCheckedItems({});
+        toast({
+          title: "Quiz sets deleted",
+          description: `${selectedQuizSetIds.length} quiz sets have been deleted successfully.`,
+          status: "success",
+          duration: 3000,
+          isClosable: true,
+        });
+      } else {
+        throw new Error('Failed to delete quiz sets');
+      }
+    } catch (error) {
+      console.error('Error deleting multiple quiz sets:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete quiz sets. Please try again.",
+        status: "error",
+        duration: 3000,
+        isClosable: true,
+      });
+    }
+    setIsDeleteMultipleAlertOpen(false);
+  };
+
+  const handleDeleteAllQuizSets = async () => {
+    try {
+      const response = await fetch(`${backendUrl}/deleteAllQuizSets`, {
+        method: 'POST',
+      });
+      if (response.ok) {
+        setQuizSets([]);
+        setCheckedItems({});
+        toast({
+          title: "All quiz sets deleted",
+          description: "All quiz sets have been deleted successfully.",
+          status: "success",
+          duration: 3000,
+          isClosable: true,
+        });
+      } else {
+        throw new Error('Failed to delete all quiz sets');
+      }
+    } catch (error) {
+      console.error('Error deleting all quiz sets:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete all quiz sets. Please try again.",
+        status: "error",
+        duration: 3000,
+        isClosable: true,
+      });
+    }
+    setIsDeleteAllAlertOpen(false);
+  };
+
   return (
     <Box
       width={['95%', '90%', '80%']}
@@ -367,273 +447,255 @@ const DynamicQuizTable = () => {
       {quizSets.length === 0 ? (
         // Display message when no quiz sets are available
         <Box p={4} textAlign="center">
-          <Text fontSize="xl" fontWeight="bold">
-            No quiz sets available.
-          </Text>
+          <Text fontSize="xl" fontWeight="bold">No quiz sets available.</Text>
           <Text mt={2}>Please add a new quiz set to get started.</Text>
         </Box>
-      ) : isMobile ? (
-        // Mobile View: Card Layout
-        <Stack spacing={4} p={4}>
-          {quizSets.map((quizSet) => (
-            <Box
-              key={quizSet.id}
-              p={4}
-              borderWidth="1px"
-              borderRadius="md"
-              boxShadow="sm"
-              bg={
-                checkedItems[quizSet.id]
-                  ? useColorModeValue('gray.100', 'gray.700')
-                  : 'inherit'
-              }
+      ) : (
+        <>
+          {/* Added Buttons for Delete Selected and Delete All */}
+          <Flex justifyContent="space-between" p={4}>
+            <Button
+              colorScheme="red"
+              onClick={() => setIsDeleteMultipleAlertOpen(true)}
+              isDisabled={!Object.values(checkedItems).some(Boolean)}
             >
-              <Flex justifyContent="space-between" alignItems="center">
-                <Checkbox
-                  isChecked={checkedItems[quizSet.id]}
-                  onChange={(e) =>
-                    handleChildCheckboxChange(quizSet.id, e.target.checked)
-                  }
-                />
-                <Flex>
-                  {/* Lock/Unlock Icon */}
-                  <IconButton
-                    aria-label={isLocked ? 'Unlock Grades' : 'Lock Grades'}
-                    icon={isLocked ? <LockClosedIcon /> : <LockOpen1Icon />}
-                    onClick={toggleLock}
-                    bg="transparent"
-                    _hover={{ color: 'blue.500' }}
-                    size="sm"
-                    mr={2}
-                  />
-                  <IconButton
-                    aria-label="Delete quiz set"
-                    icon={<TrashIcon style={{ width: '20px', height: '20px' }} />}
-                    onClick={() => onOpenDeleteAlert(quizSet.id)}
-                    bg="transparent"
-                    _hover={{ color: 'blue.500' }}
-                    size="sm"
-                  />
-                </Flex>
-              </Flex>
-              <Flex
-                mt={2}
-                alignItems="center"
-                justifyContent="space-between"
-                onMouseEnter={() => setHoveredTitleId(quizSet.id)}
-                onMouseLeave={() => setHoveredTitleId(null)}
-              >
-                {editingTitleId === quizSet.id ? (
-                  <Input
-                    value={editingTitle}
-                    onChange={handleEditChange}
-                    onBlur={() => handleRename(quizSet.id, editingTitle)}
-                    onKeyDown={(e) => handleKeyPress(e, quizSet.id)}
-                    autoFocus
-                    size="sm"
-                    maxW="150px"
-                  />
-                ) : (
-                  <Flex alignItems="center">
-                    <Link href={`/QuizModePage/${quizSet.id}`} isExternal fontSize="md">
-                      {quizSet.title}
-                    </Link>
-                    {hoveredTitleId === quizSet.id && (
+              Delete Selected
+            </Button>
+            <Button colorScheme="red" onClick={() => setIsDeleteAllAlertOpen(true)}>
+              Delete All
+            </Button>
+          </Flex>
+  
+          {isMobile ? (
+            // Mobile View: Card Layout
+            <Stack spacing={4} p={4}>
+              {quizSets.map((quizSet) => (
+                <Box
+                  key={quizSet.id}
+                  p={4}
+                  borderWidth="1px"
+                  borderRadius="md"
+                  boxShadow="sm"
+                  bg={checkedItems[quizSet.id]
+                    ? useColorModeValue('gray.100', 'gray.700')
+                    : 'inherit'}
+                >
+                  <Flex justifyContent="space-between" alignItems="center">
+                    <Checkbox
+                      isChecked={checkedItems[quizSet.id]}
+                      onChange={(e) =>
+                        handleChildCheckboxChange(quizSet.id, e.target.checked)
+                      }
+                    />
+                    <Flex>
                       <IconButton
-                        aria-label="Edit title"
-                        icon={<Pencil2Icon style={{ width: '18px', height: '18px' }} />}
-                        onClick={() => handleEditStart(quizSet)}
+                        aria-label={isLocked ? 'Unlock Grades' : 'Lock Grades'}
+                        icon={isLocked ? <LockClosedIcon /> : <LockOpen1Icon />}
+                        onClick={toggleLock}
                         bg="transparent"
                         _hover={{ color: 'blue.500' }}
                         size="sm"
-                        ml={2}
+                        mr={2}
                       />
+                      <IconButton
+                        aria-label="Delete quiz set"
+                        icon={<TrashIcon style={{ width: '20px', height: '20px' }} />}
+                        onClick={() => onOpenDeleteAlert(quizSet.id)}
+                        bg="transparent"
+                        _hover={{ color: 'blue.500' }}
+                        size="sm"
+                      />
+                    </Flex>
+                  </Flex>
+                  <Flex
+                    mt={2}
+                    alignItems="center"
+                    justifyContent="space-between"
+                    onMouseEnter={() => setHoveredTitleId(quizSet.id)}
+                    onMouseLeave={() => setHoveredTitleId(null)}
+                  >
+                    {editingTitleId === quizSet.id ? (
+                      <Input
+                        value={editingTitle}
+                        onChange={handleEditChange}
+                        onBlur={() => handleRename(quizSet.id, editingTitle)}
+                        onKeyDown={(e) => handleKeyPress(e, quizSet.id)}
+                        autoFocus
+                        size="sm"
+                        maxW="150px"
+                      />
+                    ) : (
+                      <Flex alignItems="center">
+                        <Link href={`/QuizModePage/${quizSet.id}`} isExternal fontSize="md">
+                          {quizSet.title}
+                        </Link>
+                        {hoveredTitleId === quizSet.id && (
+                          <IconButton
+                            aria-label="Edit title"
+                            icon={<Pencil2Icon style={{ width: '18px', height: '18px' }} />}
+                            onClick={() => handleEditStart(quizSet)}
+                            bg="transparent"
+                            _hover={{ color: 'blue.500' }}
+                            size="sm"
+                            ml={2}
+                          />
+                        )}
+                      </Flex>
                     )}
                   </Flex>
-                )}
-              </Flex>
   
-              {/* Progress Section */}
-              <Flex mt={2} alignItems="center">
-                <Text fontWeight="bold" mr={2} fontSize="sm">
-                  Progress:
-                </Text>
-                {/* Use Linear Progress Bar */}
-                <Box flex="1">
-                  <Progress
-                    value={quizSet.progress}
-                    size="sm"
-                    colorScheme="teal"
-                  />
-                </Box>
-                <Text fontSize="sm" ml={2}>
-                  {quizSet.progress}%
-                </Text>
-              </Flex>
+                  {/* Progress Section */}
+                  <Flex mt={2} alignItems="center">
+                    <Text fontWeight="bold" mr={2} fontSize="sm">
+                      Progress:
+                    </Text>
+                    <Box flex="1">
+                      <Progress value={quizSet.progress} size="sm" colorScheme="teal" />
+                    </Box>
+                    <Text fontSize="sm" ml={2}>{quizSet.progress}%</Text>
+                  </Flex>
   
-              {/* Grade Section */}
-              <Flex mt={2} alignItems="center">
-                <Text fontWeight="bold" mr={2} fontSize="sm">
-                  Grade:
-                </Text>
-                {renderGradeComponent(quizSet)}
-              </Flex>
+                  {/* Grade Section */}
+                  <Flex mt={2} alignItems="center">
+                    <Text fontWeight="bold" mr={2} fontSize="sm">Grade:</Text>
+                    {renderGradeComponent(quizSet)}
+                  </Flex>
   
-              {/* Status Section */}
-              <Flex mt={2} alignItems="center">
-                <Text fontWeight="bold" mr={2} fontSize="sm">
-                  Status:
-                </Text>
-                {renderBadge(quizSet.status, quizSet.progress)}
-              </Flex>
+                  {/* Status Section */}
+                  <Flex mt={2} alignItems="center">
+                    <Text fontWeight="bold" mr={2} fontSize="sm">Status:</Text>
+                    {renderBadge(quizSet.status, quizSet.progress)}
+                  </Flex>
   
-              {/* URLs Section */}
-              <Flex mt={2} alignItems="center">
-                <Text fontWeight="bold" mr={2} fontSize="sm">
-                  URLs:
-                </Text>
-                <IconButton
-                  aria-label="View URLs"
-                  icon={<OpenInNewWindowIcon style={{ width: '20px', height: '20px' }} />}
-                  onClick={() => handleOpenUrlsModal(quizSet.urls)}
-                  bg="transparent"
-                  _hover={{ color: 'blue.500' }}
-                  size="sm"
-                />
-              </Flex>
-            </Box>
-          ))}
-        </Stack>
-      ) : (
-        // Desktop View: Table Layout
-        <Table variant="simple">
-          <Thead>
-            <Tr>
-              <Th>
-                <Checkbox
-                  isChecked={allChecked}
-                  isIndeterminate={isIndeterminate}
-                  onChange={handleParentCheckboxChange}
-                />
-              </Th>
-              <Th textAlign="center">Quiz Set</Th>
-              <Th textAlign="center">URLs</Th>
-              <Th textAlign="center">Progress</Th>
-              <Th textAlign="center">Grade</Th>
-              <Th textAlign="center">Status</Th>
-              <Th textAlign="center">Actions</Th>
-            </Tr>
-          </Thead>
-          <Tbody>
-            {quizSets.map((quizSet) => (
-              <Tr
-                key={quizSet.id}
-                bg={
-                  checkedItems[quizSet.id]
-                    ? useColorModeValue('gray.100', 'gray.600')
-                    : 'transparent'
-                }
-              >
-                <Td>
-                  <Checkbox
-                    isChecked={checkedItems[quizSet.id]}
-                    onChange={(e) =>
-                      handleChildCheckboxChange(quizSet.id, e.target.checked)
-                    }
-                  />
-                </Td>
-                <Td
-                  onMouseEnter={() => setHoveredTitleId(quizSet.id)}
-                  onMouseLeave={() => setHoveredTitleId(null)}
-                >
-                  {editingTitleId === quizSet.id ? (
-                    <Input
-                      value={editingTitle}
-                      onChange={handleEditChange}
-                      onBlur={() => handleRename(quizSet.id, editingTitle)}
-                      onKeyDown={(e) => handleKeyPress(e, quizSet.id)}
-                      autoFocus
+                  {/* URLs Section */}
+                  <Flex mt={2} alignItems="center">
+                    <Text fontWeight="bold" mr={2} fontSize="sm">URLs:</Text>
+                    <IconButton
+                      aria-label="View URLs"
+                      icon={<OpenInNewWindowIcon style={{ width: '20px', height: '20px' }} />}
+                      onClick={() => handleOpenUrlsModal(quizSet.urls)}
+                      bg="transparent"
+                      _hover={{ color: 'blue.500' }}
                       size="sm"
-                      maxW="150px"
                     />
-                  ) : (
-                    <Flex alignItems="center" justifyContent="center">
-                      <Link
-                        href={`/QuizModePage/${quizSet.id}`}
-                        isExternal
-                        textAlign="center"
-                      >
-                        {quizSet.title}
-                      </Link>
-                      {hoveredTitleId === quizSet.id && (
+                  </Flex>
+                </Box>
+              ))}
+            </Stack>
+          ) : (
+            // Desktop View: Table Layout
+            <Table variant="simple">
+              <Thead>
+                <Tr>
+                  <Th>
+                    <Checkbox
+                      isChecked={allChecked}
+                      isIndeterminate={isIndeterminate}
+                      onChange={handleParentCheckboxChange}
+                    />
+                  </Th>
+                  <Th textAlign="center">Quiz Set</Th>
+                  <Th textAlign="center">URLs</Th>
+                  <Th textAlign="center">Progress</Th>
+                  <Th textAlign="center">Grade</Th>
+                  <Th textAlign="center">Status</Th>
+                  <Th textAlign="center">Actions</Th>
+                </Tr>
+              </Thead>
+              <Tbody>
+                {quizSets.map((quizSet) => (
+                  <Tr
+                    key={quizSet.id}
+                    bg={checkedItems[quizSet.id]
+                      ? useColorModeValue('gray.100', 'gray.600')
+                      : 'transparent'}
+                  >
+                    <Td>
+                      <Checkbox
+                        isChecked={checkedItems[quizSet.id]}
+                        onChange={(e) =>
+                          handleChildCheckboxChange(quizSet.id, e.target.checked)
+                        }
+                      />
+                    </Td>
+                    <Td
+                      onMouseEnter={() => setHoveredTitleId(quizSet.id)}
+                      onMouseLeave={() => setHoveredTitleId(null)}
+                    >
+                      {editingTitleId === quizSet.id ? (
+                        <Input
+                          value={editingTitle}
+                          onChange={handleEditChange}
+                          onBlur={() => handleRename(quizSet.id, editingTitle)}
+                          onKeyDown={(e) => handleKeyPress(e, quizSet.id)}
+                          autoFocus
+                          size="sm"
+                          maxW="150px"
+                        />
+                      ) : (
+                        <Flex alignItems="center" justifyContent="center">
+                          <Link href={`/QuizModePage/${quizSet.id}`} isExternal textAlign="center">
+                            {quizSet.title}
+                          </Link>
+                          {hoveredTitleId === quizSet.id && (
+                            <IconButton
+                              aria-label="Edit title"
+                              icon={<Pencil2Icon style={{ width: '18px', height: '18px' }} />}
+                              onClick={() => handleEditStart(quizSet)}
+                              bg="transparent"
+                              _hover={{ color: 'blue.500' }}
+                              size="sm"
+                              ml={2}
+                            />
+                          )}
+                        </Flex>
+                      )}
+                    </Td>
+                    <Td textAlign="center">
+                      <IconButton
+                        aria-label="View URLs"
+                        icon={<OpenInNewWindowIcon style={{ width: '20px', height: '20px' }} />}
+                        onClick={() => handleOpenUrlsModal(quizSet.urls)}
+                        bg="transparent"
+                        _hover={{ color: 'blue.500' }}
+                        size="sm"
+                      />
+                    </Td>
+                    <Td textAlign="center">
+                      <Progress value={quizSet.progress} size="sm" colorScheme="teal" width="80%" mx="auto" />
+                      <Text fontSize="sm" mt={1}>{quizSet.progress}%</Text>
+                    </Td>
+                    <Td textAlign="center">{renderGradeComponent(quizSet)}</Td>
+                    <Td textAlign="center">
+                      {renderBadge(quizSet.status, quizSet.progress)}
+                    </Td>
+                    <Td textAlign="center">
+                      <Flex alignItems="center" justifyContent="center">
                         <IconButton
-                          aria-label="Edit title"
-                          icon={
-                            <Pencil2Icon style={{ width: '18px', height: '18px' }} />
-                          }
-                          onClick={() => handleEditStart(quizSet)}
+                          aria-label={isLocked ? 'Unlock Grades' : 'Lock Grades'}
+                          icon={isLocked ? <LockClosedIcon /> : <LockOpen1Icon />}
+                          onClick={toggleLock}
                           bg="transparent"
                           _hover={{ color: 'blue.500' }}
                           size="sm"
-                          ml={2}
+                          mr={2}
                         />
-                      )}
-                    </Flex>
-                  )}
-                </Td>
-                <Td textAlign="center">
-                  <IconButton
-                    aria-label="View URLs"
-                    icon={
-                      <OpenInNewWindowIcon style={{ width: '20px', height: '20px' }} />
-                    }
-                    onClick={() => handleOpenUrlsModal(quizSet.urls)}
-                    bg="transparent"
-                    _hover={{ color: 'blue.500' }}
-                    size="sm"
-                  />
-                </Td>
-                <Td textAlign="center">
-                  <Progress
-                    value={quizSet.progress}
-                    size="sm"
-                    colorScheme="teal"
-                    width="80%"
-                    mx="auto"
-                  />
-                  <Text fontSize="sm" mt={1}>
-                    {quizSet.progress}%
-                  </Text>
-                </Td>
-                <Td textAlign="center">{renderGradeComponent(quizSet)}</Td>
-                <Td textAlign="center">
-                  {renderBadge(quizSet.status, quizSet.progress)}
-                </Td>
-                <Td textAlign="center">
-                  <Flex alignItems="center" justifyContent="center">
-                    <IconButton
-                      aria-label={isLocked ? 'Unlock Grades' : 'Lock Grades'}
-                      icon={isLocked ? <LockClosedIcon /> : <LockOpen1Icon />}
-                      onClick={toggleLock}
-                      bg="transparent"
-                      _hover={{ color: 'blue.500' }}
-                      size="sm"
-                      mr={2}
-                    />
-                    <IconButton
-                      aria-label="Delete quiz set"
-                      icon={<TrashIcon style={{ width: '20px', height: '20px' }} />}
-                      onClick={() => onOpenDeleteAlert(quizSet.id)}
-                      bg="transparent"
-                      _hover={{ color: 'blue.500' }}
-                      size="sm"
-                    />
-                  </Flex>
-                </Td>
-              </Tr>
-            ))}
-          </Tbody>
-        </Table>
+                        <IconButton
+                          aria-label="Delete quiz set"
+                          icon={<TrashIcon style={{ width: '20px', height: '20px' }} />}
+                          onClick={() => onOpenDeleteAlert(quizSet.id)}
+                          bg="transparent"
+                          _hover={{ color: 'blue.500' }}
+                          size="sm"
+                        />
+                      </Flex>
+                    </Td>
+                  </Tr>
+                ))}
+              </Tbody>
+            </Table>
+          )}
+        </>
       )}
   
       {/* Modals and Dialogs */}
@@ -654,14 +716,63 @@ const DynamicQuizTable = () => {
               Are you sure? You can't undo this action afterwards.
             </AlertDialogBody>
             <AlertDialogFooter>
-              <Button
-                ref={cancelRef}
-                onClick={() => setIsDeleteAlertOpen(false)}
-              >
+              <Button ref={cancelRef} onClick={() => setIsDeleteAlertOpen(false)}>
                 No
               </Button>
               <Button colorScheme="red" onClick={handleDeleteQuizSet} ml={3}>
                 Yes
+              </Button>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialogOverlay>
+      </AlertDialog>
+  
+      {/* Delete Multiple Confirmation Dialog */}
+      <AlertDialog
+        isOpen={isDeleteMultipleAlertOpen}
+        leastDestructiveRef={cancelRef}
+        onClose={() => setIsDeleteMultipleAlertOpen(false)}
+      >
+        <AlertDialogOverlay>
+          <AlertDialogContent>
+            <AlertDialogHeader fontSize="lg" fontWeight="bold">
+              Delete Selected Quiz Sets
+            </AlertDialogHeader>
+            <AlertDialogBody>
+              Are you sure? This action cannot be undone.
+            </AlertDialogBody>
+            <AlertDialogFooter>
+              <Button ref={cancelRef} onClick={() => setIsDeleteMultipleAlertOpen(false)}>
+                Cancel
+              </Button>
+              <Button colorScheme="red" onClick={handleDeleteMultipleQuizSets} ml={3}>
+                Delete
+              </Button>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialogOverlay>
+      </AlertDialog>
+  
+      {/* Delete All Confirmation Dialog */}
+      <AlertDialog
+        isOpen={isDeleteAllAlertOpen}
+        leastDestructiveRef={cancelRef}
+        onClose={() => setIsDeleteAllAlertOpen(false)}
+      >
+        <AlertDialogOverlay>
+          <AlertDialogContent>
+            <AlertDialogHeader fontSize="lg" fontWeight="bold">
+              Delete All Quiz Sets
+            </AlertDialogHeader>
+            <AlertDialogBody>
+              Are you sure you want to delete all quiz sets? This action cannot be undone.
+            </AlertDialogBody>
+            <AlertDialogFooter>
+              <Button ref={cancelRef} onClick={() => setIsDeleteAllAlertOpen(false)}>
+                Cancel
+              </Button>
+              <Button colorScheme="red" onClick={handleDeleteAllQuizSets} ml={3}>
+                Delete All
               </Button>
             </AlertDialogFooter>
           </AlertDialogContent>

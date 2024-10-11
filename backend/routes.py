@@ -127,19 +127,6 @@ def get_quiz_sets():
         'title': quiz_set.title
     } for quiz_set in quiz_sets])
 
-@app.route('/api/deleteQuizSet/<string:quiz_set_id>', methods=['DELETE'])
-def delete_quiz_set(quiz_set_id):
-    quiz_set = db.session.query(QuizSet).get(quiz_set_id)
-    if not quiz_set:
-        return jsonify({'message': 'Quiz set not found'}), 404
-
-    # Delete related questions first
-    Question.query.filter_by(quiz_set_id=quiz_set_id).delete()
-    db.session.delete(quiz_set)
-    db.session.commit()
-    
-    return jsonify({'message': f'Quiz set {quiz_set_id} deleted successfully'}), 200
-
 @app.route('/api/renameQuizSet/<string:quiz_set_id>', methods=['PUT'])
 def rename_quiz_set(quiz_set_id):
     data = request.json
@@ -532,4 +519,45 @@ def download_quiz_pdf(quiz_set_id):
     p.save()
     buffer.seek(0)
 
-    return send_file(buffer, as_attachment=True, download_name=f"{quiz_set.title}.pdf", mimetype='application/pdf')
+    return send_file(buffer, as_attachment=True, download_name=f"{quiz_set.title}.pdf", mimetype='application/pdf')\
+
+@app.route('/api/deleteQuizSet/<string:quiz_set_id>', methods=['DELETE'])
+def delete_quiz_set(quiz_set_id):
+    quiz_set = QuizSet.query.get(quiz_set_id)
+    if not quiz_set:
+        return jsonify({'message': 'Quiz set not found'}), 404
+
+    db.session.delete(quiz_set)
+    db.session.commit()
+    
+    return jsonify({'message': f'Quiz set {quiz_set_id} deleted successfully'}), 200
+
+@app.route('/api/deleteMultipleQuizSets', methods=['POST'])
+def delete_multiple_quiz_sets():
+    data = request.json
+    quiz_set_ids = data.get('quizSetIds', [])
+    
+    if not quiz_set_ids:
+        return jsonify({'message': 'No quiz sets specified for deletion'}), 400
+    
+    try:
+        quiz_sets = QuizSet.query.filter(QuizSet.id.in_(quiz_set_ids)).all()
+        for quiz_set in quiz_sets:
+            db.session.delete(quiz_set)
+        db.session.commit()
+        return jsonify({'message': f'{len(quiz_set_ids)} quiz sets deleted successfully'}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'message': f'Error deleting quiz sets: {str(e)}'}), 500
+
+@app.route('/api/deleteAllQuizSets', methods=['POST'])
+def delete_all_quiz_sets():
+    try:
+        quiz_sets = QuizSet.query.all()
+        for quiz_set in quiz_sets:
+            db.session.delete(quiz_set)
+        db.session.commit()
+        return jsonify({'message': 'All quiz sets deleted successfully'}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'message': f'Error deleting all quiz sets: {str(e)}'}), 500
