@@ -3,6 +3,7 @@ import { useRouter } from 'next/router';
 import { useToast, useColorMode, useColorModeValue, useDisclosure, useBreakpointValue } from '@chakra-ui/react';
 import { getBackendUrl } from '@/utils/getBackendUrl';
 import { Question } from '@/utils/types';
+import io from 'socket.io-client';
 
 interface QuestionData {
   id: number;
@@ -55,10 +56,41 @@ const useQuizState = () => {
   const { isOpen: isConfirmationModalOpen, onOpen: onConfirmationModalOpen, onClose: onConfirmationModalClose } = useDisclosure();
   const { isOpen: isResetModalOpen, onOpen: onResetModalOpen, onClose: onResetModalClose } = useDisclosure();
 
+  useEffect(() => {
+    if (!id) return;
+
+    const socket = io(backendUrl);
+
+    socket.on('connect', () => {
+      console.log('Connected to WebSocket');
+    });
+
+    socket.on('quiz_set_update', (updatedQuizSet) => {
+      if (updatedQuizSet.id === id) {
+        setScore(updatedQuizSet.score);
+        // Add other state updates as necessary
+      }
+    });
+
+    socket.on('question_update', (updatedQuestion) => {
+      if (updatedQuestion.quiz_set_id === id) {
+        setQuestions((previousQuestions) => 
+          previousQuestions.map((question) => 
+            question.id === updatedQuestion.id ? { ...question, ...updatedQuestion } : question
+          )
+        );
+      }
+    });
+
+    return () => {
+      socket.disconnect();
+    };
+  }, [id, backendUrl]);
+
   const shuffleArray = <T,>(array: T[]): void => {
-    for (let i = array.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [array[i], array[j]] = [array[j], array[i]];
+    for (let index = array.length - 1; index > 0; index--) {
+      const randomIndex = Math.floor(Math.random() * (index + 1));
+      [array[index], array[randomIndex]] = [array[randomIndex], array[index]];
     }
   };
 
@@ -69,12 +101,12 @@ const useQuizState = () => {
 
       const options = question.options.slice();
       const correctAnswerContent = question.options.find(
-        (opt, idx) => `Option ${String.fromCharCode(65 + idx)}` === question.answer
+        (option, index) => `Option ${String.fromCharCode(65 + index)}` === question.answer
       );
 
       shuffleArray(options);
 
-      const newCorrectAnswerIndex = options.findIndex(opt => opt === correctAnswerContent);
+      const newCorrectAnswerIndex = options.findIndex(option => option === correctAnswerContent);
       const newAnswerLabel = `Option ${String.fromCharCode(65 + newCorrectAnswerIndex)}`;
 
       const updatedQuestion: Question = {
@@ -116,8 +148,8 @@ const useQuizState = () => {
       }
     });
 
-    setPreserveShuffleState((prevState) => ({
-      ...prevState,
+    setPreserveShuffleState((previousState) => ({
+      ...previousState,
       optionsShuffled: newOptionsShuffledState,
     }));
   };
@@ -132,16 +164,16 @@ const useQuizState = () => {
       let shuffledQuestionsData = await shuffledResponse.json();
       console.log("Shuffled questions received:", shuffledQuestionsData);
 
-      let shuffledQuestions: Question[] = shuffledQuestionsData.map((q: QuestionData) => ({
-        id: q.id,
-        order: q.order,
-        question: q.text,
-        options: q.options,
-        answer: q.answer,
-        url: q.url,
-        explanation: q.explanation,
-        discussion_link: q.discussion_link,
-        hasMathContent: q.hasMathContent,
+      let shuffledQuestions: Question[] = shuffledQuestionsData.map((question: QuestionData) => ({
+        id: question.id,
+        order: question.order,
+        question: question.text,
+        options: question.options,
+        answer: question.answer,
+        url: question.url,
+        explanation: question.explanation,
+        discussion_link: question.discussion_link,
+        hasMathContent: question.hasMathContent,
         userSelectedOption: null,
       }));
 
@@ -177,7 +209,7 @@ const useQuizState = () => {
   };
 
   const handleFlipCard = () => {
-    setIsCardFlipped(prev => !prev);
+    setIsCardFlipped((previousState) => !previousState);
   };
 
   const fetchUserSelections = async () => {
@@ -185,9 +217,9 @@ const useQuizState = () => {
       const response = await fetch(`${backendUrl}/getUserSelections/${id}`);
       if (!response.ok) throw new Error('Network response was not ok');
       const selections = await response.json();
-      setQuestions(prevQuestions => prevQuestions.map(q => ({
-        ...q,
-        userSelectedOption: selections[q.id] || null
+      setQuestions((previousQuestions) => previousQuestions.map((question) => ({
+        ...question,
+        userSelectedOption: selections[question.id] || null
       })));
     } catch (error) {
       console.error('Error fetching user selections:', error);
@@ -203,21 +235,21 @@ const useQuizState = () => {
 
       console.log("Fetched Questions Data:", data);
 
-      let mappedQuestions: Question[] = data.map((q: QuestionData) => ({
-        id: q.id,
-        order: q.order,
-        question: q.text,
-        options: q.options.slice(),
-        originalOptions: q.options.slice(),
-        answer: q.answer,
-        url: q.url,
-        explanation: q.explanation,
-        discussion_link: q.discussion_link,
-        hasMathContent: q.hasMathContent,
+      let mappedQuestions: Question[] = data.map((question: QuestionData) => ({
+        id: question.id,
+        order: question.order,
+        question: question.text,
+        options: question.options.slice(),
+        originalOptions: question.options.slice(),
+        answer: question.answer,
+        url: question.url,
+        explanation: question.explanation,
+        discussion_link: question.discussion_link,
+        hasMathContent: question.hasMathContent,
         userSelectedOption: null,
       }));
 
-      mappedQuestions.sort((a: Question, b: Question) => a.order - b.order);
+      mappedQuestions.sort((questionA: Question, questionB: Question) => questionA.order - questionB.order);
 
       setQuestions(mappedQuestions);
       await fetchUserSelections();
@@ -244,7 +276,7 @@ const useQuizState = () => {
       const response = await fetch(`${backendUrl}/getFavorites/${id}`);
       if (!response.ok) throw new Error('Network response was not ok');
       const favoritedQuestions = await response.json();
-      setFavorites(new Set(favoritedQuestions.map((q: { id: number }) => q.id)));
+      setFavorites(new Set(favoritedQuestions.map((question: { id: number }) => question.id)));
     } catch (error) {
       console.error('Error fetching favorites:', error);
     }
@@ -258,8 +290,8 @@ const useQuizState = () => {
     })
       .then(response => response.json())
       .then(() => {
-        setFavorites(prev => {
-          const newFavorites = new Set(prev);
+        setFavorites(previousFavorites => {
+          const newFavorites = new Set(previousFavorites);
           let message = "";
           if (newFavorites.has(questionId)) {
             newFavorites.delete(questionId);
@@ -293,14 +325,14 @@ const useQuizState = () => {
 
   const handleOptionSelect = async (optionIndex: number | null) => {
     const questionId = filteredQuestions[currentQuestionIndex].id;
-    const currentQuestion = questions.find(q => q.id === questionId);
+    const currentQuestion = questions.find(question => question.id === questionId);
 
     if (!currentQuestion) {
       console.error("Question not found");
       return;
     }
 
-    const previouslySelectedOptionIndex = currentQuestion.options.findIndex(opt => opt === currentQuestion.userSelectedOption);
+    const previouslySelectedOptionIndex = currentQuestion.options.findIndex(option => option === currentQuestion.userSelectedOption);
 
     let selectedOption: string | null = null;
     if (optionIndex !== null) {
@@ -323,11 +355,11 @@ const useQuizState = () => {
       body: JSON.stringify({ question_id: questionId, selected_option: selectedOption })
     });
 
-    setQuestions(prevQuestions => prevQuestions.map(q => {
-      if (q.id === questionId) {
-        return { ...q, userSelectedOption: selectedOption };
+    setQuestions(previousQuestions => previousQuestions.map(question => {
+      if (question.id === questionId) {
+        return { ...question, userSelectedOption: selectedOption };
       }
-      return q;
+      return question;
     }));
   };
 
@@ -339,8 +371,8 @@ const useQuizState = () => {
     });
   };
 
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchKeyword(e.target.value);
+  const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchKeyword(event.target.value);
   };
 
   const onNavigateToQuestion = (index: number) => {
@@ -349,7 +381,7 @@ const useQuizState = () => {
   };
 
   const handleSubmit = () => {
-    const unansweredQuestions = questions.filter(q => q.userSelectedOption === null);
+    const unansweredQuestions = questions.filter(question => question.userSelectedOption === null);
 
     if (unansweredQuestions.length > 0) {
       setUnansweredQuestions(unansweredQuestions);
@@ -360,9 +392,9 @@ const useQuizState = () => {
   };
 
   const calculateAndShowSummary = () => {
-    const calculatedScore = questions.reduce((acc, question) => {
+    const calculatedScore = questions.reduce((accumulator, question) => {
       const correct = question.userSelectedOption === question.answer;
-      return acc + (correct ? 1 : 0);
+      return accumulator + (correct ? 1 : 0);
     }, 0);
 
     console.log(`Calculated Score: ${calculatedScore}`);
@@ -413,22 +445,22 @@ const useQuizState = () => {
     let list;
     switch (filter) {
       case 'favorites':
-        list = questions.filter(q => favorites.has(q.id));
+        list = questions.filter(question => favorites.has(question.id));
         break;
       case 'answered':
-        list = questions.filter(q => q.userSelectedOption !== null);
+        list = questions.filter(question => question.userSelectedOption !== null);
         break;
       case 'unanswered':
-        list = questions.filter(q => q.userSelectedOption === null);
+        list = questions.filter(question => question.userSelectedOption === null);
         break;
       case 'incorrect':
-        list = questions.filter(q => q.userSelectedOption !== q.answer);
+        list = questions.filter(question => question.userSelectedOption !== question.answer);
         break;
       default:
         list = [...questions];
     }
-    list.sort((a: Question, b: Question) => a.order - b.order);
-    return list.findIndex(q => q.id === questionId);
+    list.sort((questionA: Question, questionB: Question) => questionA.order - questionB.order);
+    return list.findIndex(question => question.id === questionId);
   };
 
   const handleReset = async () => {
@@ -504,21 +536,16 @@ const useQuizState = () => {
   };
 
   const submitQuiz = async () => {
-    // Calculate the score
-    const correctAnswers = questions.filter(q => q.userSelectedOption === q.answer).length;
+    const correctAnswers = questions.filter(question => question.userSelectedOption === question.answer).length;
     const totalQuestions = questions.length;
     const score = correctAnswers;
 
-    // Send the score to the backend
     try {
       await fetch(`${backendUrl}/updateQuizSetScore/${id}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ score }),
       });
-
-      // Optionally, fetch updated quiz sets to refresh data
-      // You can call fetchQuizSets() here if you have access to it
       console.log('Score submitted successfully');
     } catch (error) {
       console.error('Error updating quiz set score:', error);
@@ -537,8 +564,8 @@ const useQuizState = () => {
   }, [id]);
 
   useEffect(() => {
-    const answeredQuestions = questions.filter(q => q.userSelectedOption !== null);
-    const unansweredQuestions = questions.filter(q => q.userSelectedOption === null);
+    const answeredQuestions = questions.filter(question => question.userSelectedOption !== null);
+    const unansweredQuestions = questions.filter(question => question.userSelectedOption === null);
     switch (selectedFilter) {
       case 'favorites':
         setFilteredQuestions(questions.filter(question => favorites.has(question.id)));
@@ -561,18 +588,18 @@ const useQuizState = () => {
         filtered = questions.filter(question => favorites.has(question.id));
         break;
       case 'answered':
-        filtered = questions.filter(q => q.userSelectedOption !== null);
+        filtered = questions.filter(question => question.userSelectedOption !== null);
         break;
       case 'unanswered':
-        filtered = questions.filter(q => q.userSelectedOption === null);
+        filtered = questions.filter(question => question.userSelectedOption === null);
         break;
       case 'incorrect':
-        filtered = questions.filter(q => q.userSelectedOption !== q.answer);
+        filtered = questions.filter(question => question.userSelectedOption !== question.answer);
         break;
       default:
         filtered = [...questions];
     }
-    filtered.sort((a: Question, b: Question) => a.order - b.order);
+    filtered.sort((questionA: Question, questionB: Question) => questionA.order - questionB.order);
     setFilteredQuestions(filtered);
   }, [questions, favorites, selectedFilter]);
 

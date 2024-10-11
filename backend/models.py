@@ -13,6 +13,8 @@ class QuizSet(db.Model):
     lock_state = db.Column(db.Boolean, default=True)
     score = db.Column(db.Integer, nullable=True)
     attempts = db.Column(db.Integer, default=0)
+    finished = db.Column(db.Boolean, default=False)
+    progress = db.Column(db.Integer, default=0)
     
     questions = db.relationship('Question', backref='quiz_set', lazy=True, cascade="all, delete-orphan")
     attempts_list = db.relationship('Attempt', backref='quiz_set', lazy=True, cascade="all, delete-orphan")
@@ -28,6 +30,24 @@ class QuizSet(db.Model):
         if not self.attempts_list:
             return None
         return self.attempts_list[-1].score if self.attempts_list else None
+
+    @hybrid_property
+    def progress(self):
+        if self.finished:
+            return 100
+        total_questions = len(self.questions)
+        if total_questions == 0:
+            return 0
+        answered_questions = sum(1 for q in self.questions if q.user_selected_option is not None)
+        return int((answered_questions / total_questions) * 100)
+
+    @hybrid_property
+    def unanswered_questions_count(self):
+        total_questions = len(self.questions)
+        if total_questions == 0:
+            return 0
+        unanswered_questions = sum(1 for q in self.questions if q.user_selected_option is None)
+        return unanswered_questions
 
 class Question(db.Model):
     id = db.Column(db.Integer, primary_key=True)

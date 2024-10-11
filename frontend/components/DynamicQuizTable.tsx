@@ -86,7 +86,6 @@ const DynamicQuizTable = () => {
       const response = await fetch(`${backendUrl}/getQuizSets`);
       if (!response.ok) throw new Error('Network response was not ok');
       const quizSetsData: QuizSet[] = await response.json();
-      console.log('Fetched Quiz Sets Data:', quizSetsData); // Debugging
       setQuizSets(quizSetsData);
     } catch (error) {
       console.error('Error fetching quiz sets:', error);
@@ -110,27 +109,26 @@ const DynamicQuizTable = () => {
   };
 
   const renderGradeComponent = (quizSet: QuizSet) => {
-    console.log(`Quiz Set ID: ${quizSet.id}, Attempts: ${quizSet.attempts}, Average Score: ${quizSet.average_score}`); // Debugging
-    if (quizSet.attempts === 0) {
+    if (quizSet.attempts === 0 || quizSet.latest_score === null) {
       return <Text textAlign="center">Not attempted</Text>;
     }
   
-    const percentage = quizSet.total_questions > 0 ? Math.round((quizSet.score / quizSet.total_questions) * 100) : 0;
-    const gradeBadge = renderGradeBadge(quizSet.score, quizSet.total_questions);
+    const percentage = quizSet.total_questions > 0 ? Math.round((quizSet.latest_score / quizSet.total_questions) * 100) : 0;
+    const gradeBadge = renderGradeBadge(quizSet.latest_score, quizSet.total_questions);
   
     return (
       <Stat textAlign="center">
         {gradeBadge}
-        <StatNumber>{quizSet.score}/{quizSet.total_questions}</StatNumber>
+        <StatNumber>{quizSet.latest_score}/{quizSet.total_questions}</StatNumber>
         <StatHelpText>{percentage}%</StatHelpText>
       </Stat>
     );
-  };
+  };  
 
-  const renderProgressBadge = (progress: number) => {
+  const renderProgressBadge = (progress: number, finished: boolean) => {
+    if (finished) return <Badge colorScheme="green">Finished</Badge>;
     if (progress === 0) return <Badge colorScheme="gray">Not Started</Badge>;
-    if (progress < 100) return <Badge colorScheme="yellow">In Progress</Badge>;
-    if (progress === 100) return <Badge colorScheme="green">FINISHED</Badge>;
+    else return <Badge colorScheme="yellow">In Progress</Badge>;
   };  
 
   const handleOpenUrlsModal = async (quizSetId: string) => {
@@ -386,9 +384,26 @@ const DynamicQuizTable = () => {
                   </Td>
                   <Td>
                     <Flex direction="column" alignItems="center">
-                      {renderProgressBadge(quizSet.progress)}
-                      <Progress value={quizSet.progress} size="sm" colorScheme="teal" width="80%" mt={1} />
-                      <Text fontSize="sm" mt={1}>{quizSet.progress}%</Text>
+                      {renderProgressBadge(quizSet.progress, quizSet.finished)}
+                      <Box position="relative" width="80%" mt={1}>
+                        <Progress
+                          value={quizSet.finished ? 100 : quizSet.progress}
+                          size="md"
+                          colorScheme="teal"
+                        />
+                        <Text
+                          position="absolute"
+                          top="50%"
+                          left="50%"
+                          transform="translate(-50%, -50%)"
+                          fontSize="10px"
+                        >
+                          {quizSet.finished ? '100%' : `${quizSet.progress}%`}
+                        </Text>
+                      </Box>
+                      <Text fontSize="sm" mt={1}>
+                        {quizSet.unanswered_questions} unanswered q's
+                      </Text>
                     </Flex>
                   </Td>
                   <Td textAlign="center">

@@ -15,6 +15,7 @@ from selenium import webdriver
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 from html.parser import HTMLParser
+from models import Attempt
 import io
 
 providers_to_try = [
@@ -117,30 +118,20 @@ def get_questions_by_quiz_set(quiz_set_id):
 def get_quiz_sets():
     quiz_sets = QuizSet.query.all()
     result = []
-    for quiz_set in quiz_sets:
-        questions = Question.query.filter_by(quiz_set_id=quiz_set.id).all()
-        answered_questions = [q for q in questions if q.user_selected_option is not None]
-
-        # Set progress to 100% if the quiz has been submitted
-        progress = 100 if quiz_set.attempts > 0 else (len(answered_questions) / len(questions) * 100 if questions else 0)
-
-        # Use the relationship to get attempts
-        attempts = quiz_set.attempts_list
-        total_score = sum(attempt.score for attempt in attempts)
-        average_score = total_score / len(attempts) if attempts else None
-
-        # Get the latest score
-        latest_score = attempts[-1].score if attempts else 0
-
+    for qs in quiz_sets:
+        total_questions = len(qs.questions)
+        unanswered_questions = sum(1 for q in qs.questions if q.user_selected_option is None)
         result.append({
-            'id': quiz_set.id,
-            'title': quiz_set.title,
-            'urls': json.loads(quiz_set.urls) if quiz_set.urls else [],
-            'progress': round(progress),
-            'total_questions': len(questions),
-            'score': latest_score,
-            'attempts': len(attempts),
-            'average_score': round(average_score, 2) if average_score is not None else None
+            'id': qs.id,
+            'title': qs.title,
+            'score': qs.score,
+            'attempts': len(qs.attempts_list),
+            'average_score': qs.average_score,
+            'latest_score': qs.latest_score,
+            'total_questions': total_questions,
+            'unanswered_questions': unanswered_questions,
+            'finished': qs.finished,
+            'progress': qs.progress,
         })
     return jsonify(result)
 
@@ -342,6 +333,10 @@ def update_quiz_set_score(quiz_set_id):
 
     # Update attempts count
     quiz_set.attempts += 1
+
+    # Mark the quiz as finished
+    quiz_set.finished = True
+
     db.session.commit()
 
     print(f"New attempt recorded for quiz_set_id {quiz_set_id}. Total attempts: {quiz_set.attempts}")
@@ -350,15 +345,17 @@ def update_quiz_set_score(quiz_set_id):
 
 @app.route('/api/saveEditorContent', methods=['POST'])
 def save_editor_content():
-    data = request.json
-    content = data.get('content')
-
-    # Create a new EditorContent instance
-    new_content = EditorContent(content=content)
-    db.session.add(new_content)
-    db.session.commit()
-
-    return jsonify({"message": "Content saved successfully", "id": new_content.id}), 200
+    data = request.get_json()
+    score = data.get('score')
+    quiz_set = QuizSet.query.get(quiz_set_id)
+    if quiz_set:
+        quiz_set.score = score
+        new_attempt = Attempt(quiz_set_id=quiz_set_id, score=score)
+        db.session.add(new_attempt)
+        db.session.commit()
+        return jsonify({'message': 'Score updated successfully'}), 200
+    else:
+        return jsonify({'message': 'Quiz set not found'}), 404
 
 @app.route('/api/getEditorContent', methods=['GET'])
 def get_editor_content():

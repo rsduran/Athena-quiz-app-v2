@@ -12,6 +12,7 @@ export interface Question {
   discussion_link: string;
   userSelectedOption: string | null;
   hasMathContent: boolean;
+  quiz_set_id: string;
 }
 
 export interface QuestionData {
@@ -37,10 +38,12 @@ export interface PreserveShuffleState {
 export interface QuizSet {
   id: string;
   title: string;
-  urls: string[];
-  progress: number;
-  total_questions: number;
-  score: number;
+  score: number | null;
   attempts: number;
   average_score: number | null;
+  latest_score: number | null;
+  total_questions: number;
+  unanswered_questions: number;
+  finished: boolean;
+  progress: number;
 }
