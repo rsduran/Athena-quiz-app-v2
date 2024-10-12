@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { Box, Text, Center, VStack, Button, Divider, useColorModeValue, Stack, Flex, Link as ChakraLink } from '@chakra-ui/react';
 import { useRouter } from 'next/router';
+import { ChevronRightIcon } from '@chakra-ui/icons'; // Importing the ChevronRightIcon
 import Navbar from '../components/Navbar';
 import LoadingLayout from '../components/LoadingLayout';
 import { getBackendUrl } from '../utils/getBackendUrl';
@@ -76,37 +77,54 @@ export default function HomePage() {
 
           <Center>
             <Stack direction={['column', 'row']} spacing={3} align="center">
-              <Button
-                onClick={handleDashboardClick}
-                bg={useColorModeValue('black', 'white')}
-                color={useColorModeValue('white', 'black')}
-                _hover={{ bg: useColorModeValue('gray.700', 'gray.300') }}
-              >
-                Go to Dashboard
-              </Button>
               {!isLoggedIn && (
                 <>
                   <Button
                     onClick={() => router.push('/signin')}
-                    bg={useColorModeValue('black', 'white')}
-                    color={useColorModeValue('white', 'black')}
-                    _hover={{ bg: useColorModeValue('gray.700', 'gray.300') }}
+                    variant="outline"
+                    color={useColorModeValue('black', 'white')}
+                    borderColor={useColorModeValue('black', 'white')}
+                    _hover={{ bg: useColorModeValue('gray.100', 'gray.700') }}
                   >
                     Sign In
                   </Button>
+
                   <Button
-                    onClick={() => router.push('/signup')}
+                    onClick={handleDashboardClick}
                     bg={useColorModeValue('black', 'white')}
                     color={useColorModeValue('white', 'black')}
                     _hover={{ bg: useColorModeValue('gray.700', 'gray.300') }}
+                    rightIcon={<ChevronRightIcon />} // ChevronRightIcon added here
+                  >
+                    Go to Dashboard
+                  </Button>
+
+                  <Button
+                    onClick={() => router.push('/signup')}
+                    variant="outline"
+                    color={useColorModeValue('black', 'white')}
+                    borderColor={useColorModeValue('black', 'white')}
+                    _hover={{ bg: useColorModeValue('gray.100', 'gray.700') }}
                   >
                     Sign Up
                   </Button>
                 </>
               )}
+
+              {isLoggedIn && (
+                <Button
+                  onClick={handleDashboardClick}
+                  bg={useColorModeValue('black', 'white')}
+                  color={useColorModeValue('white', 'black')}
+                  _hover={{ bg: useColorModeValue('gray.700', 'gray.300') }}
+                  rightIcon={<ChevronRightIcon />} // ChevronRightIcon added here
+                >
+                  Go to Dashboard
+                </Button>
+              )}
             </Stack>
           </Center>
-          
+
           <Flex flex={1} />
 
           {/* Footer */}
