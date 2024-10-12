@@ -1,27 +1,61 @@
 // Dashboard.tsx
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/router';
 import DashboardNavbar from '../components/DashboardNavbar';
-import { Box, Flex, useBreakpointValue } from '@chakra-ui/react';
+import { Box, Flex, useBreakpointValue, Spinner, Center } from '@chakra-ui/react';
 import LoadingLayout from '../components/LoadingLayout';
 import CalendarEditor from '../components/CalendarEditor';
 import DynamicQuizTable from '../components/DynamicQuizTable';
 import CountdownTimer from '../components/CountdownTimer';
 import MotivationalQuote from '../components/MotivationalQuote';
+import { getBackendUrl } from '../utils/getBackendUrl';
 
 const Dashboard = () => {
   const [refreshKey, setRefreshKey] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
+  const router = useRouter();
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      const backendUrl = getBackendUrl();
+      try {
+        const response = await fetch(`${backendUrl}/auth/status`, {
+          credentials: 'include'
+        });
+        const data = await response.json();
+        if (!data.isLoggedIn) {
+          router.push('/signin');
+        } else {
+          setIsLoading(false);
+        }
+      } catch (error) {
+        console.error('Error checking auth status:', error);
+        router.push('/signin');
+      }
+    };
+
+    checkAuth();
+  }, [router]);
 
   const handleAddNewQuizSet = () => {
-    // Refresh the quiz sets by updating the refresh key
     setRefreshKey((oldKey) => oldKey + 1);
   };
 
-  // Determine the flex direction based on screen size
   const flexDirection = useBreakpointValue<'column' | 'row'>({
     base: 'column',
     md: 'row',
   }) || 'column';
+
+  if (isLoading) {
+    return (
+      <LoadingLayout>
+        <Center height="100vh">
+          <Spinner size="xl" />
+        </Center>
+      </LoadingLayout>
+    );
+  }
 
   return (
     <LoadingLayout>

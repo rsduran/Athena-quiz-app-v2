@@ -1,5 +1,6 @@
 // components/Navbar.tsx
-import React from 'react';
+
+import React, { useEffect, useState } from 'react';
 import NextLink from 'next/link';
 import {
   Box,
@@ -13,6 +14,11 @@ import {
   VStack,
   Collapse,
   useDisclosure,
+  Avatar,
+  Menu,
+  MenuButton,
+  MenuList,
+  MenuItem,
 } from '@chakra-ui/react';
 import {
   MoonIcon,
@@ -21,6 +27,8 @@ import {
   CloseIcon,
 } from '@chakra-ui/icons';
 import { FaGithub, FaLinkedin, FaTwitter } from 'react-icons/fa';
+import { useRouter } from 'next/router';
+import { getBackendUrl } from '../utils/getBackendUrl';
 
 export default function Navbar() {
   const { colorMode, toggleColorMode } = useColorMode();
@@ -29,20 +37,53 @@ export default function Navbar() {
   const iconHoverBgDark = '#2c323d';
 
   const { isOpen, onToggle } = useDisclosure();
+  const router = useRouter();
 
-  // Define consistent sizes for Chakra UI icons and React Icons
-  const chakraIconSize = 5; // Size for HamburgerIcon and other Chakra UI icons
-  const closeIconSize = 3.5; // Smaller size for CloseIcon
-  const reactIconSize = '20px'; // Adjust as needed for React Icons
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [userAvatar, setUserAvatar] = useState('');
 
-  // Common IconButton styles
+  const chakraIconSize = 5;
+  const closeIconSize = 3.5;
+  const reactIconSize = '20px';
+
   const iconButtonStyles = {
     bg: iconBg,
     _hover: {
       bg: colorMode === 'light' ? iconHoverBgLight : iconHoverBgDark,
     },
     size: 'md',
-    // Removed 'isRound: true' to have square-like hover backgrounds
+  };
+
+  useEffect(() => {
+    const checkLoginStatus = async () => {
+      const backendUrl = getBackendUrl();
+      try {
+        const response = await fetch(`${backendUrl}/auth/status`, {
+          credentials: 'include'
+        });
+        const data = await response.json();
+        setIsLoggedIn(data.isLoggedIn);
+        setUserAvatar(data.avatar || '');
+      } catch (error) {
+        console.error('Error checking auth status:', error);
+      }
+    };
+    checkLoginStatus();
+  }, []);
+
+  const handleLogout = async () => {
+    const backendUrl = getBackendUrl();
+    try {
+      await fetch(`${backendUrl}/auth/logout`, { 
+        method: 'POST',
+        credentials: 'include'
+      });
+      setIsLoggedIn(false);
+      setUserAvatar('');
+      window.location.href = '/';
+    } catch (error) {
+      console.error('Error logging out:', error);
+    }
   };
 
   return (
@@ -58,9 +99,7 @@ export default function Navbar() {
       zIndex={1000}
     >
       <Flex h={16} alignItems={'center'} justifyContent={'space-between'}>
-        {/* Left Side: Logo and Navigation Links */}
         <Flex alignItems={'center'}>
-          {/* Logo */}
           <NextLink href="/" passHref>
             <Link
               _hover={{ textDecoration: 'none' }}
@@ -73,7 +112,6 @@ export default function Navbar() {
             </Link>
           </NextLink>
 
-          {/* Desktop Navigation Links */}
           <HStack
             as={'nav'}
             spacing={4}
@@ -99,9 +137,7 @@ export default function Navbar() {
           </HStack>
         </Flex>
 
-        {/* Right Side: Social Media Icons, Mobile Menu Button, Theme Toggle Button */}
         <Flex alignItems={'center'}>
-          {/* Social Media Icons (Desktop Only) */}
           <HStack spacing={2} mr={2} display={{ base: 'none', md: 'flex' }}>
             <Link href="https://github.com/rsduran" isExternal>
               <IconButton
@@ -129,7 +165,6 @@ export default function Navbar() {
             </Link>
           </HStack>
 
-          {/* Mobile Menu Button */}
           <IconButton
             aria-label={'Open Menu'}
             icon={
@@ -142,11 +177,10 @@ export default function Navbar() {
             display={{ md: 'none' }}
             onClick={onToggle}
             mr={2}
-            mb={1} // Added mb={1} to adjust vertical alignment
+            mb={1}
             {...iconButtonStyles}
           />
 
-          {/* Theme Toggle Button */}
           <IconButton
             aria-label={'Toggle Dark Mode'}
             icon={
@@ -158,11 +192,29 @@ export default function Navbar() {
             }
             onClick={toggleColorMode}
             {...iconButtonStyles}
+            mr={2}
           />
+
+          {isLoggedIn && (
+            <Menu>
+              <MenuButton
+                as={IconButton}
+                rounded={'full'}
+                variant={'link'}
+                cursor={'pointer'}
+                minW={0}
+              >
+                <Avatar size={'sm'} src={userAvatar} />
+              </MenuButton>
+              <MenuList>
+                <MenuItem onClick={() => router.push('/Dashboard')}>Dashboard</MenuItem>
+                <MenuItem onClick={handleLogout}>Logout</MenuItem>
+              </MenuList>
+            </Menu>
+          )}
         </Flex>
       </Flex>
 
-      {/* Mobile Navigation Menu */}
       <Collapse in={isOpen} animateOpacity>
         <Box pb={4} display={{ md: 'none' }}>
           <VStack as={'nav'} spacing={4}>
@@ -185,7 +237,6 @@ export default function Navbar() {
               </NextLink>
             ))}
 
-            {/* Social Media Icons in Mobile Menu */}
             <HStack spacing={2}>
               <Link href="https://github.com/rsduran" isExternal>
                 <IconButton
