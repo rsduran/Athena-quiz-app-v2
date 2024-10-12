@@ -1,7 +1,5 @@
-// MotivationalQuote.tsx
-
 import React, { useEffect, useState } from 'react';
-import { Alert, AlertIcon, Box, Text, Flex } from '@chakra-ui/react';
+import { Alert, Box, Text } from '@chakra-ui/react';
 
 const quotes = [
   "Success is the sum of small efforts, repeated day in and day out. 🌟 - Robert Collier",
@@ -93,13 +91,13 @@ const MotivationalQuote = () => {
         py={6}
       >
         <Text fontSize={['lg', 'xl']} mt={4} fontStyle="italic">
-          {textWithoutEmoji} {emoji}
+          {textWithoutEmoji}{' '}
+          <Text as="span" fontStyle="normal">
+            {emoji}
+          </Text>
         </Text>
         <Text fontSize={['md', 'lg']} mt={2}>
           - {author}
-        </Text>
-        <Text fontSize={['sm', 'md']} mt={4}>
-          You can add a quiz set by clicking the ‘+’ icon in the navigation bar.
         </Text>
       </Alert>
     </Box>

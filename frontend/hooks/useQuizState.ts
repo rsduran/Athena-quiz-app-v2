@@ -3,7 +3,6 @@ import { useRouter } from 'next/router';
 import { useToast, useColorMode, useColorModeValue, useDisclosure, useBreakpointValue } from '@chakra-ui/react';
 import { getBackendUrl } from '@/utils/getBackendUrl';
 import { Question } from '@/utils/types';
-import io from 'socket.io-client';
 
 interface QuestionData {
   id: number;
@@ -55,37 +54,6 @@ const useQuizState = () => {
   const { isOpen: isSearchModalOpen, onOpen: onSearchModalOpen, onClose: onSearchModalClose } = useDisclosure();
   const { isOpen: isConfirmationModalOpen, onOpen: onConfirmationModalOpen, onClose: onConfirmationModalClose } = useDisclosure();
   const { isOpen: isResetModalOpen, onOpen: onResetModalOpen, onClose: onResetModalClose } = useDisclosure();
-
-  useEffect(() => {
-    if (!id) return;
-
-    const socket = io(backendUrl);
-
-    socket.on('connect', () => {
-      console.log('Connected to WebSocket');
-    });
-
-    socket.on('quiz_set_update', (updatedQuizSet) => {
-      if (updatedQuizSet.id === id) {
-        setScore(updatedQuizSet.score);
-        // Add other state updates as necessary
-      }
-    });
-
-    socket.on('question_update', (updatedQuestion) => {
-      if (updatedQuestion.quiz_set_id === id) {
-        setQuestions((previousQuestions) => 
-          previousQuestions.map((question) => 
-            question.id === updatedQuestion.id ? { ...question, ...updatedQuestion } : question
-          )
-        );
-      }
-    });
-
-    return () => {
-      socket.disconnect();
-    };
-  }, [id, backendUrl]);
 
   const shuffleArray = <T,>(array: T[]): void => {
     for (let index = array.length - 1; index > 0; index--) {
@@ -318,9 +286,76 @@ const useQuizState = () => {
       .catch(error => console.error('Error toggling favorite:', error));
   };
 
+
+  const fetchCurrentQuestionIndex = useCallback(async () => {
+    if (id) {
+      try {
+        const response = await fetch(`${backendUrl}/getCurrentQuestionIndex/${id}`);
+        if (response.ok) {
+          const data = await response.json();
+          setCurrentQuestionIndex(data.current_question_index);
+        }
+      } catch (error) {
+        console.error('Error fetching current question index:', error);
+      }
+    }
+  }, [id, backendUrl]);
+
+  const updateCurrentQuestionIndex = useCallback(async (index: number) => {
+    if (id) {
+      try {
+        await fetch(`${backendUrl}/updateCurrentQuestionIndex/${id}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ index }),
+        });
+      } catch (error) {
+        console.error('Error updating current question index:', error);
+      }
+    }
+  }, [id, backendUrl]);
+
+  useEffect(() => {
+    fetchCurrentQuestionIndex();
+  }, [fetchCurrentQuestionIndex]);
+
+  const fetchQuizSetState = useCallback(async () => {
+    if (id) {
+      try {
+        const response = await fetch(`${backendUrl}/getQuizSetState/${id}`);
+        if (response.ok) {
+          const data = await response.json();
+          setCurrentQuestionIndex(data.current_question_index);
+          setSelectedFilter(data.current_filter);
+        }
+      } catch (error) {
+        console.error('Error fetching quiz set state:', error);
+      }
+    }
+  }, [id, backendUrl]);
+
+  const updateQuizSetState = useCallback(async (index: number, filter: string) => {
+    if (id) {
+      try {
+        await fetch(`${backendUrl}/updateQuizSetState/${id}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ index, filter }),
+        });
+      } catch (error) {
+        console.error('Error updating quiz set state:', error);
+      }
+    }
+  }, [id, backendUrl]);
+
+  useEffect(() => {
+    fetchQuizSetState();
+  }, [fetchQuizSetState]);
+
   const handleDropdownChange = (value: string) => {
     setSelectedFilter(value);
     setCurrentQuestionIndex(0);
+    updateQuizSetState(0, value);
   };
 
   const handleOptionSelect = async (optionIndex: number | null) => {
@@ -509,7 +544,7 @@ const useQuizState = () => {
     }
   }, [id, backendUrl, eyeIconState]);
 
-  const handleNavigate = (action: string, value?: number) => {
+  const handleNavigate = useCallback((action: string, value?: number) => {
     setIsCardFlipped(false);
 
     let newIndex = currentQuestionIndex;
@@ -524,16 +559,17 @@ const useQuizState = () => {
         newIndex = value ? value - 1 : currentQuestionIndex;
         break;
       case 'reset':
-        setCurrentQuestionIndex(0);
-        return;
+        newIndex = 0;
+        break;
     }
     if (newIndex >= 0 && newIndex < filteredQuestions.length) {
       if (newIndex !== currentQuestionIndex) {
         setIsCardFlipped(false);
       }
       setCurrentQuestionIndex(newIndex);
+      updateQuizSetState(newIndex, selectedFilter);
     }
-  };
+  }, [currentQuestionIndex, filteredQuestions.length, selectedFilter, updateQuizSetState]);
 
   const submitQuiz = async () => {
     const correctAnswers = questions.filter(question => question.userSelectedOption === question.answer).length;
@@ -665,7 +701,6 @@ const useQuizState = () => {
       getQuestionIndex,
       setQuestions,
       setFilteredQuestions,
-      setCurrentQuestionIndex,
       setIsCardFlipped,
       setFavorites,
       setSelectedFilter,
@@ -705,6 +740,10 @@ const useQuizState = () => {
       navigateToIncorrect,
       handleReset,
       toggleFlipCardVisibility,
+      setCurrentQuestionIndex: (index: number) => {
+        setCurrentQuestionIndex(index);
+        updateQuizSetState(index, selectedFilter);
+      },
       handleNavigate,
     },
   };

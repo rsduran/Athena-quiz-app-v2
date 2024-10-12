@@ -46,4 +46,5 @@ export interface QuizSet {
   unanswered_questions: number;
   finished: boolean;
   progress: number;
+  last_updated: string;
 }

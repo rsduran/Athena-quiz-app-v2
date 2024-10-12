@@ -1,9 +1,10 @@
 // CalendarEditor.tsx
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import dynamic from 'next/dynamic';
-import { Box, Flex, useColorMode, useBreakpointValue } from '@chakra-ui/react';
+import { Box, Flex, useColorMode, useBreakpointValue, Text } from '@chakra-ui/react';
 import { Calendar } from '@/components/ui/calendar';
+import debounce from 'lodash/debounce';
 
 import 'react-quill/dist/quill.snow.css';
 import './custom-quill.css';
@@ -50,9 +51,12 @@ const formats = [
   'video',
 ];
 
-const CalendarEditor = () => {
+const CalendarEditor: React.FC = () => {
   const [date, setDate] = useState<Date | undefined>(new Date());
-  const [editorContent, setEditorContent] = useState('');
+  const [editorContent, setEditorContent] = useState<string>('');
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isSaving, setIsSaving] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
   const { colorMode } = useColorMode();
 
   useEffect(() => {
@@ -65,28 +69,67 @@ const CalendarEditor = () => {
   }, [date]);
 
   const fetchEditorContent = () => {
+    setIsLoading(true);
+    setError(null);
     fetch(`${backendUrl}/getEditorContent`)
-      .then((response) => response.json())
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+      })
       .then((data) => {
         setEditorContent(data.content);
         localStorage.setItem('editorContent', data.content);
       })
-      .catch((error) => console.error('Error fetching editor content:', error));
+      .catch((error) => {
+        console.error('Error fetching editor content:', error);
+        setError('Failed to fetch editor content. Please try again.');
+      })
+      .finally(() => {
+        setIsLoading(false);
+      });
   };
 
-  // Define handleEditorChange function
+  const saveEditorContent = useCallback(
+    debounce((content: string) => {
+      setIsSaving(true);
+      setError(null);
+      fetch(`${backendUrl}/saveEditorContent`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content }),
+      })
+        .then(response => {
+          if (!response.ok) {
+            return response.text().then(text => {
+              throw new Error(`HTTP error! status: ${response.status}, message: ${text}`);
+            });
+          }
+          return response.json();
+        })
+        .then(data => {
+          console.log('Content saved successfully:', data);
+        })
+        .catch((error) => {
+          console.error('Error saving editor content:', error);
+          setError(`Failed to save content: ${error.message}`);
+        })
+        .finally(() => {
+          setIsSaving(false);
+        });
+    }, 3000),
+    []
+  );
+
   const handleEditorChange = (content: string) => {
-    setEditorContent(content);
-    localStorage.setItem('editorContent', content);
-
-    fetch(`${backendUrl}/saveEditorContent`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ content }),
-    }).catch((error) => console.error('Error saving editor content:', error));
+    if (content !== undefined) {
+      setEditorContent(content);
+      localStorage.setItem('editorContent', content);
+      saveEditorContent(content);
+    }
   };
 
-  // Determine flex direction based on screen size
   const flexDirection = useBreakpointValue<'column' | 'row'>({
     base: 'column',
     md: 'row',
@@ -111,16 +154,24 @@ const CalendarEditor = () => {
         />
       </Box>
       <Box flexGrow={1} ml={[0, 4]} width="100%">
-        <QuillNoSSRWrapper
-          theme="snow"
-          value={editorContent}
-          onChange={handleEditorChange}
-          modules={modules}
-          formats={formats}
-          placeholder="Put your study plan here."
-          style={{ height: editorHeight, overflowY: 'auto' }}
-          className={colorMode === 'dark' ? 'quill-dark-mode' : ''}
-        />
+        {isLoading ? (
+          <Text>Loading...</Text>
+        ) : (
+          <>
+            {isSaving && <Text fontSize="sm" color="gray.500">Saving...</Text>}
+            {error && <Text color="red.500">{error}</Text>}
+            <QuillNoSSRWrapper
+              theme="snow"
+              value={editorContent}
+              onChange={handleEditorChange}
+              modules={modules}
+              formats={formats}
+              placeholder="Put your study plan here."
+              style={{ height: editorHeight, overflowY: 'auto' }}
+              className={colorMode === 'dark' ? 'quill-dark-mode' : ''}
+            />
+          </>
+        )}
       </Box>
     </Flex>
   );

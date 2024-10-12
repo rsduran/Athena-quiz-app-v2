@@ -3,6 +3,8 @@
 from db import db
 import uuid
 from sqlalchemy.ext.hybrid import hybrid_property
+from datetime import datetime
+from pytz import timezone
 
 class QuizSet(db.Model):
     id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
@@ -15,6 +17,10 @@ class QuizSet(db.Model):
     attempts = db.Column(db.Integer, default=0)
     finished = db.Column(db.Boolean, default=False)
     progress = db.Column(db.Integer, default=0)
+    last_updated = db.Column(db.DateTime, default=lambda: datetime.now(timezone('Asia/Manila')))
+    sort_order = db.Column(db.String(4), default='desc')
+    current_question_index = db.Column(db.Integer, default=0)
+    current_filter = db.Column(db.String(20), default='all')
     
     questions = db.relationship('Question', backref='quiz_set', lazy=True, cascade="all, delete-orphan")
     attempts_list = db.relationship('Attempt', backref='quiz_set', lazy=True, cascade="all, delete-orphan")
@@ -48,6 +54,10 @@ class QuizSet(db.Model):
             return 0
         unanswered_questions = sum(1 for q in self.questions if q.user_selected_option is None)
         return unanswered_questions
+
+    def update_last_updated(self):
+        self.last_updated = datetime.now(timezone('Asia/Manila'))
+        db.session.commit()
 
 class Question(db.Model):
     id = db.Column(db.Integer, primary_key=True)

@@ -16,6 +16,8 @@ from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 from html.parser import HTMLParser
 from models import Attempt
+from datetime import datetime
+from pytz import timezone
 import io
 
 providers_to_try = [
@@ -117,10 +119,12 @@ def get_questions_by_quiz_set(quiz_set_id):
 @app.route('/api/getQuizSets', methods=['GET'])
 def get_quiz_sets():
     quiz_sets = QuizSet.query.all()
+    ph_tz = timezone('Asia/Manila')
     result = []
     for qs in quiz_sets:
         total_questions = len(qs.questions)
         unanswered_questions = sum(1 for q in qs.questions if q.user_selected_option is None)
+        last_updated = qs.last_updated.astimezone(ph_tz) if qs.last_updated else None
         result.append({
             'id': qs.id,
             'title': qs.title,
@@ -132,6 +136,7 @@ def get_quiz_sets():
             'unanswered_questions': unanswered_questions,
             'finished': qs.finished,
             'progress': qs.progress,
+            'last_updated': last_updated.isoformat() if last_updated else None,
         })
     return jsonify(result)
 
@@ -345,17 +350,27 @@ def update_quiz_set_score(quiz_set_id):
 
 @app.route('/api/saveEditorContent', methods=['POST'])
 def save_editor_content():
-    data = request.get_json()
-    score = data.get('score')
-    quiz_set = QuizSet.query.get(quiz_set_id)
-    if quiz_set:
-        quiz_set.score = score
-        new_attempt = Attempt(quiz_set_id=quiz_set_id, score=score)
-        db.session.add(new_attempt)
+    try:
+        data = request.get_json()
+        content = data.get('content')
+        
+        if not content:
+            return jsonify({'message': 'No content provided'}), 400
+
+        # Create a new EditorContent object or update an existing one
+        editor_content = EditorContent.query.first()
+        if editor_content:
+            editor_content.content = content
+        else:
+            editor_content = EditorContent(content=content)
+            db.session.add(editor_content)
+
         db.session.commit()
-        return jsonify({'message': 'Score updated successfully'}), 200
-    else:
-        return jsonify({'message': 'Quiz set not found'}), 404
+        return jsonify({'message': 'Content saved successfully'}), 200
+    except Exception as e:
+        db.session.rollback()
+        app.logger.error(f"Error saving editor content: {str(e)}")
+        return jsonify({'message': 'An error occurred while saving content'}), 500
 
 @app.route('/api/getEditorContent', methods=['GET'])
 def get_editor_content():
@@ -590,3 +605,72 @@ def get_raw_urls(quiz_set_id):
     if quiz_set:
         return jsonify({"rawUrls": quiz_set.raw_urls}), 200
     return jsonify({"message": "Quiz set not found"}), 404
+
+@app.route('/api/updateSortOrder', methods=['POST'])
+def update_sort_order():
+    data = request.json
+    sort_order = data.get('sortOrder')
+    if sort_order not in ['asc', 'desc']:
+        return jsonify({"message": "Invalid sort order"}), 400
+
+    # Update sort order for all quiz sets
+    QuizSet.query.update({QuizSet.sort_order: sort_order})
+    db.session.commit()
+
+    return jsonify({"message": "Sort order updated successfully"}), 200
+
+@app.route('/api/getSortOrder', methods=['GET'])
+def get_sort_order():
+    # Get the sort order from any quiz set (assuming all have the same sort order)
+    quiz_set = QuizSet.query.first()
+    if quiz_set:
+        return jsonify({"sortOrder": quiz_set.sort_order}), 200
+    else:
+        return jsonify({"sortOrder": "desc"}), 200  # Default to 'desc' if no quiz sets exist
+
+@app.route('/api/updateCurrentQuestionIndex/<string:quiz_set_id>', methods=['POST'])
+def update_current_question_index(quiz_set_id):
+    data = request.json
+    index = data.get('index')
+    
+    quiz_set = QuizSet.query.get(quiz_set_id)
+    if quiz_set:
+        quiz_set.current_question_index = index
+        db.session.commit()
+        return jsonify({"message": "Current question index updated successfully"}), 200
+    else:
+        return jsonify({"message": "Quiz set not found"}), 404
+
+@app.route('/api/getCurrentQuestionIndex/<string:quiz_set_id>', methods=['GET'])
+def get_current_question_index(quiz_set_id):
+    quiz_set = QuizSet.query.get(quiz_set_id)
+    if quiz_set:
+        return jsonify({"current_question_index": quiz_set.current_question_index}), 200
+    else:
+        return jsonify({"message": "Quiz set not found"}), 404
+
+@app.route('/api/updateQuizSetState/<string:quiz_set_id>', methods=['POST'])
+def update_quiz_set_state(quiz_set_id):
+    data = request.json
+    index = data.get('index')
+    filter_type = data.get('filter')
+    
+    quiz_set = QuizSet.query.get(quiz_set_id)
+    if quiz_set:
+        quiz_set.current_question_index = index
+        quiz_set.current_filter = filter_type
+        db.session.commit()
+        return jsonify({"message": "Quiz set state updated successfully"}), 200
+    else:
+        return jsonify({"message": "Quiz set not found"}), 404
+
+@app.route('/api/getQuizSetState/<string:quiz_set_id>', methods=['GET'])
+def get_quiz_set_state(quiz_set_id):
+    quiz_set = QuizSet.query.get(quiz_set_id)
+    if quiz_set:
+        return jsonify({
+            "current_question_index": quiz_set.current_question_index,
+            "current_filter": quiz_set.current_filter
+        }), 200
+    else:
+        return jsonify({"message": "Quiz set not found"}), 404

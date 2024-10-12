@@ -58,14 +58,14 @@ const processTextForImages = (
   return processedText;
 };
 
-const QuestionDisplay = ({
+const QuestionDisplay: React.FC<QuestionDisplayProps> = ({
   question,
   onOptionSelect,
   selectedOption,
   cardBgColor,
   cardTextColor,
   unselectedOptionBg,
-}: QuestionDisplayProps) => {
+}) => {
   const selectedBorderColor = useColorModeValue('blue.500', 'blue.300');
   const unselectedBorderColor = useColorModeValue('gray.200', 'gray.600');
   const selectedTextColor = useColorModeValue('blue.600', 'blue.200');
@@ -96,7 +96,7 @@ const QuestionDisplay = ({
           fontSize="xl"
           mb={4}
         >
-          <div dangerouslySetInnerHTML={{ __html: processedQuestion }} />
+          <Box as="span" dangerouslySetInnerHTML={{ __html: processedQuestion }} />
         </Text>
       </MathJax>
 
@@ -126,7 +126,7 @@ const QuestionDisplay = ({
             alignItems="center"
           >
             <MathJax dynamic>
-              <div dangerouslySetInnerHTML={{ __html: processedOption }} style={{ width: '100%' }} />
+              <Box as="span" dangerouslySetInnerHTML={{ __html: processedOption }} width="100%" />
             </MathJax>
           </Box>
         );

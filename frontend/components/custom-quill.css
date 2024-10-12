@@ -17,3 +17,7 @@
 .quill-dark-mode .ql-editor.ql-blank::before {
   color: #ccc; /* Lighter placeholder color for dark mode */
 }
+
+.ql-editor {
+  font-family: 'HurmeGeometricSans2', sans-serif !important;
+}
