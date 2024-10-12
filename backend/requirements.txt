@@ -11,3 +11,4 @@ selenium==4.22.0
 urllib3==2.2.2
 curl_cffi
 pytz
+Authlib

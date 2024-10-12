@@ -1,7 +1,8 @@
 # routes.py
 
-from app_init import app, db  # Absolute imports
-from flask import request, jsonify, session, send_file
+from app_init import app, db, github  # Absolute imports
+from flask import redirect, url_for, request, jsonify, session, send_file, current_app
+from authlib.integrations.flask_client import OAuthError
 from models import QuizSet, Question, EditorContent, FurtherExplanation  # Absolute imports
 from scraping_helpers import process_question, process_pinoybix_question, process_examveda_question, process_examprimer_question, fetch_discussion_comments  # Absolute imports
 import config  # Absolute imports
@@ -674,3 +675,55 @@ def get_quiz_set_state(quiz_set_id):
         }), 200
     else:
         return jsonify({"message": "Quiz set not found"}), 404
+
+
+@app.route('/api/auth/github')
+def github_login():
+    print("[DEBUG] GitHub login route accessed")
+    redirect_uri = url_for('github_authorized', _external=True)
+    print(f"[DEBUG] Redirect URI: {redirect_uri}")
+    return github.authorize_redirect(redirect_uri=redirect_uri)
+
+@app.route('/api/auth/github/callback')
+def github_authorized():
+    print("[DEBUG] GitHub callback route accessed")
+    try:
+        token = github.authorize_access_token()
+        print(f"[DEBUG] Access token received: {'*' * len(token)}")
+        resp = github.get('user', token=token)
+        user_info = resp.json()
+        print(f"[DEBUG] User info received: {user_info.get('login')}")
+        
+        session['user_id'] = user_info['id']
+        session['user_name'] = user_info['login']
+        session['user_avatar'] = user_info['avatar_url']
+        print(f"[DEBUG] Session set for user: {session['user_name']}")
+        
+        # Redirect to the frontend application
+        frontend_url = current_app.config.get('FRONTEND_URL', 'http://localhost:3000')
+        return redirect(f"{frontend_url}/Dashboard")
+    except OAuthError as e:
+        print(f"[ERROR] OAuth Error in github_authorized: {str(e)}")
+        return jsonify({"error": f"OAuth Error: {str(e)}"}), 400
+    except Exception as e:
+        print(f"[ERROR] Error in github_authorized: {str(e)}")
+        return jsonify({"error": "Failed to complete GitHub authentication"}), 500
+
+@app.route('/api/auth/status')
+def auth_status():
+    print(f"[DEBUG] Auth status checked. User in session: {'user_id' in session}")
+    if 'user_id' in session:
+        return jsonify({
+            'isLoggedIn': True,
+            'username': session.get('user_name'),
+            'avatar': session.get('user_avatar')
+        })
+    return jsonify({'isLoggedIn': False})
+
+@app.route('/api/auth/logout', methods=['POST'])
+def logout():
+    print(f"[DEBUG] Logout requested for user: {session.get('user_name')}")
+    session.pop('user_id', None)
+    session.pop('user_name', None)
+    session.pop('user_avatar', None)
+    return jsonify({'message': 'Successfully logged out'})
