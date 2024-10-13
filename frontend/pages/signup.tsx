@@ -17,6 +17,7 @@ export default function SignUp() {
   const handleGitHubAuth = () => {
     const backendUrl = getBackendUrl();
     console.log(`[DEBUG] Initiating GitHub auth. Backend URL: ${backendUrl}`);
+    console.log(`[DEBUG] GitHub OAuth URL: ${process.env.NEXT_PUBLIC_GITHUB_OAUTH_URL}`); // Add this to inspect OAuth URL
     window.location.href = `${backendUrl}/auth/github`;
   };
 

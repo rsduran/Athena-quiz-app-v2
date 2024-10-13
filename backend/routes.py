@@ -682,6 +682,7 @@ def github_login():
     print("[DEBUG] GitHub login route accessed")
     redirect_uri = url_for('github_authorized', _external=True)
     print(f"[DEBUG] Redirect URI: {redirect_uri}")
+    print(f"[DEBUG] GitHub OAuth URL: https://github.com/login/oauth/authorize?client_id={app.config['GITHUB_CLIENT_ID']}&redirect_uri={redirect_uri}") # Add this to inspect the full URL
     return github.authorize_redirect(redirect_uri=redirect_uri)
 
 @app.route('/api/auth/github/callback')
