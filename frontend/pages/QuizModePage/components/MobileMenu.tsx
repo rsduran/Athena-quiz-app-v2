@@ -28,23 +28,74 @@ import {
 } from '@radix-ui/react-icons';
 
 interface MobileMenuProps {
-  state: any;
-  actions: any;
+  state?: {
+    filteredQuestions?: any[];
+    currentQuestionIndex?: number;
+    isDrawerOpen?: boolean;
+    selectedFilter?: string;
+    favorites?: Set<number>;
+    optionsShuffled?: boolean;
+    eyeIcon?: string;
+    colorMode?: string;
+    iconHoverBg?: string;
+  };
+  actions?: {
+    onDrawerOpen?: () => void;
+    onDrawerClose?: () => void;
+    handleDropdownChange?: (value: string) => void;
+    handleToggleFavorites?: (id: number) => void;
+    handleSubmit?: () => void;
+    handleToggleShuffleOptions?: () => void;
+    onConfirmationModalOpen?: () => void;
+    toggleFlipCardVisibility?: () => void;
+    onResetModalOpen?: () => void;
+    onSearchModalOpen?: () => void;
+    toggleColorMode?: () => void;
+  };
 }
 
-const MobileMenu: React.FC<MobileMenuProps> = ({ state, actions }) => {
-  const currentQuestion = state.filteredQuestions[state.currentQuestionIndex];
+const MobileMenu: React.FC<MobileMenuProps> = ({ 
+  state = {}, 
+  actions = {}
+}) => {
+  const {
+    filteredQuestions = [],
+    currentQuestionIndex = 0,
+    isDrawerOpen = false,
+    selectedFilter = 'all',
+    favorites = new Set(),
+    optionsShuffled = false,
+    eyeIcon = 'open',
+    colorMode = 'light',
+    iconHoverBg = '',
+  } = state;
+
+  const {
+    onDrawerOpen = () => {},
+    onDrawerClose = () => {},
+    handleDropdownChange = () => {},
+    handleToggleFavorites = () => {},
+    handleSubmit = () => {},
+    handleToggleShuffleOptions = () => {},
+    onConfirmationModalOpen = () => {},
+    toggleFlipCardVisibility = () => {},
+    onResetModalOpen = () => {},
+    onSearchModalOpen = () => {},
+    toggleColorMode = () => {},
+  } = actions;
+
+  const currentQuestion = filteredQuestions[currentQuestionIndex];
 
   return (
     <>
       <IconButton
         aria-label="Menu"
         icon={<HamburgerMenuIcon style={{ width: '20px', height: '20px' }} />}
-        onClick={actions.onDrawerOpen}
+        onClick={onDrawerOpen}
         backgroundColor="transparent"
-        _hover={{ backgroundColor: state.iconHoverBg }}
+        _hover={{ backgroundColor: iconHoverBg }}
       />
-      <Drawer isOpen={state.isDrawerOpen} placement="right" onClose={actions.onDrawerClose}>
+      <Drawer isOpen={isDrawerOpen} placement="right" onClose={onDrawerClose}>
         <DrawerOverlay />
         <DrawerContent>
           <DrawerHeader p={0}>
@@ -56,8 +107,8 @@ const MobileMenu: React.FC<MobileMenuProps> = ({ state, actions }) => {
           <DrawerBody>
             <Stack spacing={4}>
               <Select
-                value={state.selectedFilter}
-                onChange={(e) => actions.handleDropdownChange(e.target.value)}
+                value={selectedFilter}
+                onChange={(e) => handleDropdownChange(e.target.value)}
               >
                 <option value="all">All Questions</option>
                 <option value="favorites">Favorites</option>
@@ -67,9 +118,9 @@ const MobileMenu: React.FC<MobileMenuProps> = ({ state, actions }) => {
               </Select>
 
               <Button
-                onClick={() => currentQuestion && actions.handleToggleFavorites(currentQuestion.id)}
+                onClick={() => currentQuestion && handleToggleFavorites(currentQuestion.id)}
                 leftIcon={
-                  currentQuestion && state.favorites.has(currentQuestion.id) ? (
+                  currentQuestion && favorites.has(currentQuestion.id) ? (
                     <StarFilledIcon style={{ width: '20px', height: '20px' }} />
                   ) : (
                     <StarIcon style={{ width: '20px', height: '20px' }} />
@@ -77,14 +128,15 @@ const MobileMenu: React.FC<MobileMenuProps> = ({ state, actions }) => {
                 }
                 variant="ghost"
                 fontWeight="bold"
+                isDisabled={!currentQuestion}
               >
-                {currentQuestion && state.favorites.has(currentQuestion.id)
+                {currentQuestion && favorites.has(currentQuestion.id)
                   ? 'Remove from Favorites'
                   : 'Add to Favorites'}
               </Button>
 
               <Button
-                onClick={actions.handleSubmit}
+                onClick={handleSubmit}
                 variant="ghost"
                 fontWeight="bold"
               >
@@ -93,8 +145,8 @@ const MobileMenu: React.FC<MobileMenuProps> = ({ state, actions }) => {
 
               <Flex alignItems="center" justifyContent="center">
                 <Switch
-                  isChecked={state.optionsShuffled}
-                  onChange={actions.handleToggleShuffleOptions}
+                  isChecked={optionsShuffled}
+                  onChange={handleToggleShuffleOptions}
                   size="lg"
                   colorScheme="teal"
                   mr={2}
@@ -103,7 +155,7 @@ const MobileMenu: React.FC<MobileMenuProps> = ({ state, actions }) => {
               </Flex>
 
               <Button
-                onClick={actions.onConfirmationModalOpen}
+                onClick={onConfirmationModalOpen}
                 leftIcon={<ShuffleIcon style={{ width: '20px', height: '20px' }} />}
                 variant="ghost"
                 fontWeight="bold"
@@ -112,9 +164,9 @@ const MobileMenu: React.FC<MobileMenuProps> = ({ state, actions }) => {
               </Button>
 
               <Button
-                onClick={actions.toggleFlipCardVisibility}
+                onClick={toggleFlipCardVisibility}
                 leftIcon={
-                  state.eyeIcon === 'open' ? (
+                  eyeIcon === 'open' ? (
                     <EyeOpenIcon style={{ width: '20px', height: '20px' }} />
                   ) : (
                     <EyeNoneIcon style={{ width: '20px', height: '20px' }} />
@@ -123,11 +175,11 @@ const MobileMenu: React.FC<MobileMenuProps> = ({ state, actions }) => {
                 variant="ghost"
                 fontWeight="bold"
               >
-                {state.eyeIcon === 'open' ? 'Hide Flip Card' : 'Show Flip Card'}
+                {eyeIcon === 'open' ? 'Hide Flip Card' : 'Show Flip Card'}
               </Button>
 
               <Button
-                onClick={actions.onResetModalOpen}
+                onClick={onResetModalOpen}
                 leftIcon={<UpdateIcon style={{ width: '20px', height: '20px' }} />}
                 variant="ghost"
                 fontWeight="bold"
@@ -136,7 +188,7 @@ const MobileMenu: React.FC<MobileMenuProps> = ({ state, actions }) => {
               </Button>
 
               <Button
-                onClick={actions.onSearchModalOpen}
+                onClick={onSearchModalOpen}
                 leftIcon={<MagnifyingGlassIcon style={{ width: '23px', height: '23px' }} />}
                 variant="ghost"
                 fontWeight="bold"
@@ -145,9 +197,9 @@ const MobileMenu: React.FC<MobileMenuProps> = ({ state, actions }) => {
               </Button>
 
               <Button
-                onClick={actions.toggleColorMode}
+                onClick={toggleColorMode}
                 leftIcon={
-                  state.colorMode === 'dark' ? (
+                  colorMode === 'dark' ? (
                     <SunIcon style={{ width: '20px', height: '20px' }} />
                   ) : (
                     <MoonIcon style={{ width: '20px', height: '20px' }} />
@@ -156,7 +208,7 @@ const MobileMenu: React.FC<MobileMenuProps> = ({ state, actions }) => {
                 variant="ghost"
                 fontWeight="bold"
               >
-                Toggle {state.colorMode === 'light' ? 'Dark' : 'Light'} Mode
+                Toggle {colorMode === 'light' ? 'Dark' : 'Light'} Mode
               </Button>
             </Stack>
           </DrawerBody>

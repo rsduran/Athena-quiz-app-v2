@@ -50,6 +50,7 @@ export const mapQuestionData = (data: QuestionData[]): Question[] => {
     discussion_link: q.discussion_link,
     hasMathContent: q.hasMathContent,
     userSelectedOption: null,
+    quiz_set_id: q.quiz_set_id,
   }));
 };
 

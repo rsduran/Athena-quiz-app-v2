@@ -15,21 +15,51 @@ import {
 import { SunIcon, MoonIcon } from '@chakra-ui/icons';
 
 interface DesktopMenuProps {
-  state: any;
-  actions: any;
+  state?: {
+    filteredQuestions?: any[];
+    currentQuestionIndex?: number;
+    selectedFilter?: string;
+    favorites?: Set<number>;
+    iconHoverBg?: string;
+    iconBg?: string;
+  };
+  actions?: {
+    handleDropdownChange?: (value: string) => void;
+    handleToggleFavorites?: (id: number) => void;
+    onConfirmationModalOpen?: () => void;
+    onSearchModalOpen?: () => void;
+  };
 }
 
-const DesktopMenu: React.FC<DesktopMenuProps> = ({ state, actions }) => {
+const DesktopMenu: React.FC<DesktopMenuProps> = ({ 
+  state = {}, 
+  actions = {}
+}) => {
   const { colorMode, toggleColorMode } = useColorMode();
 
-  // Get the current question
-  const currentQuestion = state.filteredQuestions[state.currentQuestionIndex];
+  const {
+    filteredQuestions = [],
+    currentQuestionIndex = 0,
+    selectedFilter = 'all',
+    favorites = new Set(),
+    iconHoverBg = '',
+    iconBg = '',
+  } = state;
+
+  const {
+    handleDropdownChange = () => {},
+    handleToggleFavorites = () => {},
+    onConfirmationModalOpen = () => {},
+    onSearchModalOpen = () => {},
+  } = actions;
+
+  const currentQuestion = filteredQuestions[currentQuestionIndex];
 
   return (
     <Flex align="center" gap={2}>
       <Select
-        value={state.selectedFilter}
-        onChange={(e) => actions.handleDropdownChange(e.target.value)}
+        value={selectedFilter}
+        onChange={(e) => handleDropdownChange(e.target.value)}
         width="180px"
       >
         <option value="all">All Questions</option>
@@ -43,15 +73,15 @@ const DesktopMenu: React.FC<DesktopMenuProps> = ({ state, actions }) => {
         <IconButton
           aria-label="Favorites"
           icon={
-            currentQuestion && state.favorites.has(currentQuestion.id) ? (
+            currentQuestion && favorites.has(currentQuestion.id) ? (
               <StarFilledIcon style={{ width: '20px', height: '20px' }} />
             ) : (
               <StarIcon style={{ width: '20px', height: '20px' }} />
             )
           }
-          onClick={() => currentQuestion && actions.handleToggleFavorites(currentQuestion.id)}
+          onClick={() => currentQuestion && handleToggleFavorites(currentQuestion.id)}
           backgroundColor="transparent"
-          _hover={{ backgroundColor: state.iconHoverBg }}
+          _hover={{ backgroundColor: iconHoverBg }}
           isDisabled={!currentQuestion}
         />
       </Tooltip>
@@ -60,9 +90,9 @@ const DesktopMenu: React.FC<DesktopMenuProps> = ({ state, actions }) => {
         <IconButton
           aria-label="Shuffle"
           icon={<ShuffleIcon style={{ width: '20px', height: '20px' }} />}
-          onClick={actions.onConfirmationModalOpen}
+          onClick={onConfirmationModalOpen}
           backgroundColor="transparent"
-          _hover={{ backgroundColor: state.iconHoverBg }}
+          _hover={{ backgroundColor: iconHoverBg }}
         />
       </Tooltip>
 
@@ -70,9 +100,9 @@ const DesktopMenu: React.FC<DesktopMenuProps> = ({ state, actions }) => {
         <IconButton
           aria-label="Search"
           icon={<MagnifyingGlassIcon style={{ width: '23px', height: '23px' }} />}
-          onClick={actions.onSearchModalOpen}
+          onClick={onSearchModalOpen}
           backgroundColor="transparent"
-          _hover={{ backgroundColor: state.iconHoverBg }}
+          _hover={{ backgroundColor: iconHoverBg }}
         />
       </Tooltip>
 
@@ -86,8 +116,8 @@ const DesktopMenu: React.FC<DesktopMenuProps> = ({ state, actions }) => {
         }
         onClick={toggleColorMode}
         aria-label="Toggle Dark Mode"
-        backgroundColor={state.iconBg}
-        _hover={{ backgroundColor: state.iconHoverBg }}
+        backgroundColor={iconBg}
+        _hover={{ backgroundColor: iconHoverBg }}
       />
     </Flex>
   );

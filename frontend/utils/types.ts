@@ -26,6 +26,7 @@ export interface QuestionData {
   discussion_link: string;
   userSelectedOption: string | null;
   hasMathContent: boolean;
+  quiz_set_id: string;
 }
 
 export type NavigateToQuestionFunction = (index: number) => void;
