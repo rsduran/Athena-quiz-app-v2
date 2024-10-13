@@ -23,3 +23,5 @@ spec:
               value: "http://k8s-threetie-mainlb-7703746d77-255087660.ap-southeast-2.elb.amazonaws.com/api"
             - name: NEXT_PUBLIC_ENV
               value: "production"
+            - name: NEXT_PUBLIC_GITHUB_OAUTH_URL
+              value: "https://github.com/login/oauth/authorize?client_id=Ov23lipCg0uto5vUsYoG&redirect_uri=http://k8s-threetie-mainlb-7703746d77-255087660.ap-southeast-2.elb.amazonaws.com/api/auth/github/callback"

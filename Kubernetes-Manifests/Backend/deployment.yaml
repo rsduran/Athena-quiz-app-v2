@@ -43,3 +43,5 @@ spec:
                 secretKeyRef:
                   name: oauth-secrets
                   key: github-client-secret
+            - name: FRONTEND_URL
+              value: "http://k8s-threetie-mainlb-7703746d77-255087660.ap-southeast-2.elb.amazonaws.com"
