@@ -708,7 +708,7 @@ def github_authorized():
         session['user_name'] = user.name
         session['user_avatar'] = user.avatar_url
         
-        frontend_url = current_app.config.get('FRONTEND_URL', 'http://localhost:3000')
+        frontend_url = current_app.config.get('FRONTEND_URL', 'k8s-threetie-mainlb-7703746d77-255087660.ap-southeast-2.elb.amazonaws.com')
         return redirect(f"{frontend_url}/Dashboard")
     except Exception as e:
         print(f"Error in github_authorized: {str(e)}")

@@ -16,7 +16,7 @@ oauth = OAuth(app)
 # Configure GitHub OAuth
 app.config['GITHUB_CLIENT_ID'] = os.environ.get('GITHUB_CLIENT_ID')
 app.config['GITHUB_CLIENT_SECRET'] = os.environ.get('GITHUB_CLIENT_SECRET')
-app.config['FRONTEND_URL'] = os.getenv('FRONTEND_URL', 'http://localhost:3000')
+app.config['FRONTEND_URL'] = os.getenv('FRONTEND_URL', 'k8s-threetie-mainlb-7703746d77-255087660.ap-southeast-2.elb.amazonaws.com')
 
 print(f"[DEBUG] GitHub Client ID: {app.config['GITHUB_CLIENT_ID']}")
 print(f"[DEBUG] GitHub Client Secret: {'*' * len(app.config['GITHUB_CLIENT_SECRET'] or '')}")
@@ -61,7 +61,7 @@ print(f"[DEBUG] Database URI: postgresql://{DB_USER}:{'*' * len(DB_PASS)}@{DB_HO
 db.init_app(app)
 
 # Configure CORS
-CORS(app, resources={r"/api/*": {"origins": "http://k8s-threetie-mainlb-7703746d77-255087660.ap-southeast-2.elb.amazonaws.com", "supports_credentials": True}})
+CORS(app, resources={r"/api/*": {"origins": app.config['FRONTEND_URL'], "supports_credentials": True}})
 print("[DEBUG] CORS configured")
 
 # Session configuration
