@@ -1,7 +1,7 @@
 # routes.py
 
 from app_init import app, db, github  # Absolute imports
-from flask import redirect, url_for, request, jsonify, session, send_file, current_app
+from flask import redirect, url_for, request, jsonify, session, send_file, current_app, make_response
 from werkzeug.exceptions import BadRequest
 from authlib.integrations.flask_client import OAuthError
 from models import QuizSet, Question, EditorContent, FurtherExplanation, User  # Absolute imports
@@ -681,13 +681,18 @@ def get_quiz_set_state(quiz_set_id):
 
 @app.route('/api/auth/github')
 def github_login():
-    print("[DEBUG] GitHub login route accessed")
     redirect_uri = url_for('github_authorized', _external=True)
     state = secrets.token_hex(16)
-    session['oauth_state'] = state
-    print(f"[DEBUG] Redirect URI: {redirect_uri}")
-    print(f"[DEBUG] Generated state: {state}")
-    return github.authorize_redirect(redirect_uri=redirect_uri, state=state)
+    resp = make_response(github.authorize_redirect(redirect_uri=redirect_uri, state=state))
+    resp.set_cookie('oauth_state', state, httponly=True, secure=True, samesite='Lax')
+    return resp
+
+from flask import request, jsonify, make_response, redirect, current_app
+from werkzeug.exceptions import BadRequest
+from authlib.integrations.flask_client import OAuthError
+from models import User
+from db import db
+import traceback
 
 @app.route('/api/auth/github/callback')
 def github_authorized():
@@ -696,22 +701,24 @@ def github_authorized():
         
         # Log all request parameters
         print(f"[DEBUG] Request args: {request.args}")
-        print(f"[DEBUG] Session data: {session}")
+        print(f"[DEBUG] Request cookies: {request.cookies}")
         
         # Verify the state parameter
         state = request.args.get('state')
+        stored_state = request.cookies.get('oauth_state')
         if not state:
             print("[ERROR] No state parameter in request")
             raise BadRequest("No state parameter provided")
         
-        if state != session.get('oauth_state'):
-            print(f"[ERROR] State mismatch. Expected: {session.get('oauth_state')}, Received: {state}")
+        if state != stored_state:
+            print(f"[ERROR] State mismatch. Expected: {stored_state}, Received: {state}")
             raise BadRequest("Invalid state parameter")
         
-        # Clear the state from the session
-        session.pop('oauth_state', None)
-
         print("[DEBUG] State verified successfully")
+
+        # Clear the state cookie
+        resp = make_response()
+        resp.delete_cookie('oauth_state')
 
         # Exchange the code for an access token
         try:
@@ -760,10 +767,10 @@ def github_authorized():
             raise BadRequest("Failed to save user information") from db_error
         
         # Set session variables
-        session['user_id'] = user.id
-        session['user_name'] = user.name
-        session['user_avatar'] = user.avatar_url
-        print("[DEBUG] Session variables set")
+        resp.set_cookie('user_id', str(user.id), httponly=True, secure=True, samesite='Lax')
+        resp.set_cookie('user_name', user.name, httponly=True, secure=True, samesite='Lax')
+        resp.set_cookie('user_avatar', user.avatar_url, httponly=True, secure=True, samesite='Lax')
+        print("[DEBUG] Session cookies set")
         
         # Redirect to the frontend
         frontend_url = current_app.config.get('FRONTEND_URL', 'http://k8s-threetie-mainlb-7703746d77-255087660.ap-southeast-2.elb.amazonaws.com')
@@ -774,6 +781,9 @@ def github_authorized():
     except BadRequest as e:
         print(f"[ERROR] BadRequest in github_authorized: {str(e)}")
         return jsonify({"error": str(e)}), 400
+    except OAuthError as e:
+        print(f"[ERROR] OAuthError in github_authorized: {str(e)}")
+        return jsonify({"error": "OAuth error occurred", "details": str(e)}), 401
     except Exception as e:
         print(f"[ERROR] Unexpected error in github_authorized: {str(e)}")
         print(f"[ERROR] Traceback: {traceback.format_exc()}")

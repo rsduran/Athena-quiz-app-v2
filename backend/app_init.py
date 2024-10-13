@@ -68,7 +68,7 @@ print("[DEBUG] CORS configured")
 app.config['SESSION_COOKIE_NAME'] = 'github_oauth_session'
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=7)
 app.config['SESSION_COOKIE_HTTPONLY'] = True
-app.config['SESSION_COOKIE_SECURE'] = ENV != 'development'  # True in production, False in development
+app.config['SESSION_COOKIE_SECURE'] = True  # True in production, False in development
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'  # or 'None' if your frontend is on a different domain
 
 print(f"[DEBUG] Session cookie settings - Name: {app.config['SESSION_COOKIE_NAME']}, "

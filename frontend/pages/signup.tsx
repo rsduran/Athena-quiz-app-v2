@@ -16,10 +16,11 @@ export default function SignUp() {
 
   const handleGitHubAuth = () => {
     const backendUrl = getBackendUrl();
-    const githubClientId = 'Ov23lipCg0uto5vUsYoG'; // Make sure this is correct
+    const githubClientId = 'Ov23lipCg0uto5vUsYoG';
     const redirectUri = encodeURIComponent(`${backendUrl}/auth/github/callback`);
     const scope = 'user:email';
     const state = Math.random().toString(36).substring(7);
+    localStorage.setItem('githubOAuthState', state);
   
     const githubOAuthUrl = `https://github.com/login/oauth/authorize?client_id=${githubClientId}&redirect_uri=${redirectUri}&scope=${scope}&state=${state}`;
   
