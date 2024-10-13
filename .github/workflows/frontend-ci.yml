@@ -29,7 +29,7 @@ jobs:
 
       - name: Build Docker image
         env:
-          NEXT_PUBLIC_BACKEND_URL: "http://k8s-threetie-mainlb-e87ebcda19-233674467.ap-southeast-2.elb.amazonaws.com/api"
+          NEXT_PUBLIC_BACKEND_URL: "http://k8s-threetie-mainlb-7703746d77-255087660.ap-southeast-2.elb.amazonaws.com/api"
         run: |
           cd frontend
           docker build --build-arg NEXT_PUBLIC_BACKEND_URL=${{ env.NEXT_PUBLIC_BACKEND_URL }} --progress=plain --no-cache -t reinduran/frontend:${{ github.run_number }} -f Dockerfile.frontend .
