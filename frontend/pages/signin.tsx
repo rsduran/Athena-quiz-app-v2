@@ -15,7 +15,15 @@ export default function SignIn() {
 
   const handleGitHubAuth = () => {
     const backendUrl = getBackendUrl();
-    window.location.href = `${backendUrl}/auth/github`;
+    const githubClientId = 'Ov23lipCg0uto5vUsYoG'; // Make sure this is correct
+    const redirectUri = encodeURIComponent(`${backendUrl}/auth/github/callback`);
+    const scope = 'user:email';
+    const state = Math.random().toString(36).substring(7);
+  
+    const githubOAuthUrl = `https://github.com/login/oauth/authorize?client_id=${githubClientId}&redirect_uri=${redirectUri}&scope=${scope}&state=${state}`;
+  
+    console.log(`[DEBUG] Initiating GitHub auth. OAuth URL: ${githubOAuthUrl}`);
+    window.location.href = githubOAuthUrl;
   };
 
   const togglePasswordVisibility = () => {
