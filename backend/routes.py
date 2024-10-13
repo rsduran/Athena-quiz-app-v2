@@ -691,56 +691,92 @@ def github_login():
 @app.route('/api/auth/github/callback')
 def github_authorized():
     try:
+        print("[DEBUG] Entered github_authorized function")
+        
+        # Log all request parameters
+        print(f"[DEBUG] Request args: {request.args}")
+        print(f"[DEBUG] Session data: {session}")
+        
         # Verify the state parameter
         state = request.args.get('state')
+        if not state:
+            print("[ERROR] No state parameter in request")
+            raise BadRequest("No state parameter provided")
+        
         if state != session.get('oauth_state'):
+            print(f"[ERROR] State mismatch. Expected: {session.get('oauth_state')}, Received: {state}")
             raise BadRequest("Invalid state parameter")
         
         # Clear the state from the session
         session.pop('oauth_state', None)
 
+        print("[DEBUG] State verified successfully")
+
         # Exchange the code for an access token
-        token = github.authorize_access_token()
+        try:
+            token = github.authorize_access_token()
+            print(f"[DEBUG] Access token obtained: {token is not None}")
+        except Exception as token_error:
+            print(f"[ERROR] Failed to obtain access token: {str(token_error)}")
+            raise BadRequest("Failed to obtain access token") from token_error
+
         if not token:
-            raise BadRequest("Failed to obtain access token")
+            print("[ERROR] No token received from GitHub")
+            raise BadRequest("No token received from GitHub")
 
         # Fetch user information from GitHub
-        resp = github.get('user', token=token)
-        user_info = resp.json()
+        try:
+            resp = github.get('user', token=token)
+            user_info = resp.json()
+            print(f"[DEBUG] User info obtained: {user_info}")
+        except Exception as user_info_error:
+            print(f"[ERROR] Failed to fetch user info: {str(user_info_error)}")
+            raise BadRequest("Failed to fetch user information from GitHub") from user_info_error
         
         if 'id' not in user_info:
-            raise BadRequest("Failed to obtain user information from GitHub")
+            print("[ERROR] User ID not found in GitHub response")
+            raise BadRequest("User ID not found in GitHub response")
 
         # Find or create the user in the database
-        user = User.query.filter_by(github_id=str(user_info['id'])).first()
-        if not user:
-            user = User(
-                github_id=str(user_info['id']),
-                name=user_info['login'],
-                email=user_info.get('email'),
-                avatar_url=user_info['avatar_url']
-            )
-            db.session.add(user)
-        else:
-            user.avatar_url = user_info['avatar_url']  # Update avatar URL on each login
-        
-        db.session.commit()
+        try:
+            user = User.query.filter_by(github_id=str(user_info['id'])).first()
+            if not user:
+                user = User(
+                    github_id=str(user_info['id']),
+                    name=user_info['login'],
+                    email=user_info.get('email'),
+                    avatar_url=user_info['avatar_url']
+                )
+                db.session.add(user)
+            else:
+                user.avatar_url = user_info['avatar_url']  # Update avatar URL on each login
+            
+            db.session.commit()
+            print(f"[DEBUG] User saved/updated in database: {user.id}")
+        except Exception as db_error:
+            print(f"[ERROR] Database operation failed: {str(db_error)}")
+            db.session.rollback()
+            raise BadRequest("Failed to save user information") from db_error
         
         # Set session variables
         session['user_id'] = user.id
         session['user_name'] = user.name
         session['user_avatar'] = user.avatar_url
+        print("[DEBUG] Session variables set")
         
         # Redirect to the frontend
         frontend_url = current_app.config.get('FRONTEND_URL', 'http://k8s-threetie-mainlb-7703746d77-255087660.ap-southeast-2.elb.amazonaws.com')
-        return redirect(f"{frontend_url}/Dashboard")
+        redirect_url = f"{frontend_url}/Dashboard"
+        print(f"[DEBUG] Redirecting to: {redirect_url}")
+        return redirect(redirect_url)
 
     except BadRequest as e:
-        print(f"BadRequest in github_authorized: {str(e)}")
+        print(f"[ERROR] BadRequest in github_authorized: {str(e)}")
         return jsonify({"error": str(e)}), 400
     except Exception as e:
-        print(f"Error in github_authorized: {str(e)}")
-        return jsonify({"error": "An unexpected error occurred during authentication"}), 500
+        print(f"[ERROR] Unexpected error in github_authorized: {str(e)}")
+        print(f"[ERROR] Traceback: {traceback.format_exc()}")
+        return jsonify({"error": "An unexpected error occurred during authentication", "details": str(e)}), 500
 
 @app.route('/api/auth/signup', methods=['POST'])
 def signup():
