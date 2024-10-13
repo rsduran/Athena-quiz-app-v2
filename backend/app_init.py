@@ -61,7 +61,7 @@ print(f"[DEBUG] Database URI: postgresql://{DB_USER}:{'*' * len(DB_PASS)}@{DB_HO
 db.init_app(app)
 
 # Configure CORS
-CORS(app, resources={r"/api/*": {"origins": app.config['FRONTEND_URL'], "supports_credentials": True}})
+CORS(app, resources={r"/api/*": {"origins": "*", "supports_credentials": True}})
 print("[DEBUG] CORS configured")
 
 # Session configuration
