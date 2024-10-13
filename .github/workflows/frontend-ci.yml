@@ -58,7 +58,7 @@ jobs:
 
       - name: Pull latest changes from remote
         run: |
-          git remote set-url origin https://rsduran:${{ secrets.GITHUB_TOKEN }}@github.com/rsduran/quiz-app-image-links.git
+          git remote set-url origin https://rsduran:${{ secrets.GITHUB_TOKEN }}@github.com/rsduran/Athena-quiz-app-v2.git
           git pull origin main --rebase
 
       - name: Push changes if there are any
