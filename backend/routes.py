@@ -677,7 +677,6 @@ def get_quiz_set_state(quiz_set_id):
     else:
         return jsonify({"message": "Quiz set not found"}), 404
 
-
 @app.route('/api/auth/github')
 def github_login():
     print("[DEBUG] GitHub login route accessed")
@@ -687,28 +686,33 @@ def github_login():
 
 @app.route('/api/auth/github/callback')
 def github_authorized():
-    print("[DEBUG] GitHub callback route accessed")
     try:
         token = github.authorize_access_token()
-        print(f"[DEBUG] Access token received: {'*' * len(token)}")
         resp = github.get('user', token=token)
         user_info = resp.json()
-        print(f"[DEBUG] User info received: {user_info.get('login')}")
         
-        session['user_id'] = user_info['id']
-        session['user_name'] = user_info['login']
-        session['user_avatar'] = user_info['avatar_url']
-        print(f"[DEBUG] Session set for user: {session['user_name']}")
+        user = User.query.filter_by(github_id=str(user_info['id'])).first()
+        if not user:
+            user = User(
+                github_id=str(user_info['id']),
+                name=user_info['login'],
+                email=user_info.get('email'),
+                avatar_url=user_info['avatar_url']
+            )
+            db.session.add(user)
+        else:
+            user.avatar_url = user_info['avatar_url']  # Update avatar URL on each login
+        db.session.commit()
         
-        # Redirect to the frontend application
+        session['user_id'] = user.id
+        session['user_name'] = user.name
+        session['user_avatar'] = user.avatar_url
+        
         frontend_url = current_app.config.get('FRONTEND_URL', 'http://localhost:3000')
         return redirect(f"{frontend_url}/Dashboard")
-    except OAuthError as e:
-        print(f"[ERROR] OAuth Error in github_authorized: {str(e)}")
-        return jsonify({"error": f"OAuth Error: {str(e)}"}), 400
     except Exception as e:
-        print(f"[ERROR] Error in github_authorized: {str(e)}")
-        return jsonify({"error": "Failed to complete GitHub authentication"}), 500
+        print(f"Error in github_authorized: {str(e)}")
+        return jsonify({"error": str(e)}), 500
 
 @app.route('/api/auth/signup', methods=['POST'])
 def signup():
@@ -766,14 +770,13 @@ def signin():
 
 @app.route('/api/auth/status')
 def auth_status():
-    print(f"[DEBUG] Auth status checked. User in session: {'user_id' in session}")
     if 'user_id' in session:
         user = User.query.get(session['user_id'])
         if user:
             return jsonify({
                 'isLoggedIn': True,
                 'username': user.name,
-                'avatar': session.get('user_avatar') or user.name[0].upper()  # Use GitHub avatar if available, else first letter of name
+                'avatar': user.avatar_url
             })
     return jsonify({'isLoggedIn': False})
 

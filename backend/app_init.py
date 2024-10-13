@@ -8,11 +8,16 @@ from db import db
 from dotenv import load_dotenv
 from datetime import timedelta
 
+# Load environment variables
 load_dotenv()
 
+# Initialize Flask app
 app = Flask(__name__)
+
+# Initialize OAuth
 oauth = OAuth(app)
 
+# Configure GitHub OAuth
 app.config['GITHUB_CLIENT_ID'] = os.environ.get('GITHUB_CLIENT_ID')
 app.config['GITHUB_CLIENT_SECRET'] = os.environ.get('GITHUB_CLIENT_SECRET')
 app.config['FRONTEND_URL'] = os.getenv('FRONTEND_URL', 'http://localhost:3000')
@@ -21,6 +26,7 @@ print(f"[DEBUG] GitHub Client ID: {app.config['GITHUB_CLIENT_ID']}")
 print(f"[DEBUG] GitHub Client Secret: {'*' * len(app.config['GITHUB_CLIENT_SECRET'])}")
 print(f"[DEBUG] Frontend URL: {app.config['FRONTEND_URL']}")
 
+# Register GitHub OAuth
 github = oauth.register(
     name='github',
     client_id=app.config['GITHUB_CLIENT_ID'],
@@ -33,12 +39,15 @@ github = oauth.register(
     client_kwargs={'scope': 'user:email'},
 )
 
+# Set secret key
 app.secret_key = os.getenv('SECRET_KEY', 'your_default_secret_key')
 print(f"[DEBUG] Secret key set: {'*' * len(app.secret_key)}")
 
+# Set environment
 ENV = os.getenv('FLASK_ENV', 'development')
 print(f"[DEBUG] Flask environment: {ENV}")
 
+# Database configuration
 DB_HOST = os.getenv('DB_HOST', 'localhost' if ENV == 'development' else 'db')
 DB_NAME = os.getenv('DB_NAME', 'quizdb')
 DB_USER = os.getenv('DB_USER', 'my_user')
@@ -49,8 +58,10 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 print(f"[DEBUG] Database URI: postgresql://{DB_USER}:{'*' * len(DB_PASS)}@{DB_HOST}:5432/{DB_NAME}")
 
+# Initialize database
 db.init_app(app)
 
+# Configure CORS
 CORS(app, resources={r"/api/*": {"origins": app.config['FRONTEND_URL'], "supports_credentials": True}})
 print("[DEBUG] CORS configured")
 
@@ -67,11 +78,23 @@ print(f"[DEBUG] Session cookie settings - Name: {app.config['SESSION_COOKIE_NAME
       f"Secure: {app.config['SESSION_COOKIE_SECURE']}, "
       f"SameSite: {app.config['SESSION_COOKIE_SAMESITE']}")
 
+# Import routes
 import routes
 
-with app.app_context():
-    db.create_all()
-    print("[DEBUG] Database tables created")
+# Function to recreate database
+def recreate_database():
+    with app.app_context():
+        # Drop all tables
+        db.drop_all()
+        print("[DEBUG] All tables dropped")
 
+        # Create all tables
+        db.create_all()
+        print("[DEBUG] Database tables created")
+
+# Recreate database
+recreate_database()
+
+# Run the app
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)

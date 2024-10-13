@@ -15,6 +15,7 @@ import {
   Link as ChakraLink,
   useColorMode
 } from '@chakra-ui/react';
+import { GiSpartanHelmet } from "react-icons/gi";
 import { useRouter } from 'next/router';
 import { ArrowRight, BookOpen, Globe, Zap } from "lucide-react";
 import Navbar from '../components/Navbar';
@@ -167,20 +168,38 @@ export default function HomePage() {
         <FadeInWhenVisible>
           <Box paddingY={["48px", "96px", "128px"]} backgroundColor={useColorModeValue("gray.50", "gray.900")}>
             <Container maxWidth="container.xl">
-              <MotionFlex direction={['column', 'row']} align="center" justify="space-between">
-                <Box flex="1" marginBottom={[8, 0]}>
-                  <Text fontSize={['3xl', '4xl', '5xl']} fontWeight="bold" marginBottom={4} color={useColorModeValue("gray.800", "white")}>
+              <Flex 
+                direction={["column", "column", "row"]} 
+                align="center" 
+                justify="space-between"
+              >
+                <Box 
+                  textAlign={["center", "center", "left"]} 
+                  maxWidth={["100%", "100%", "60%"]} 
+                  marginBottom={[8, 8, 0]}
+                >
+                  <Text 
+                    fontSize={['3xl', '4xl', '5xl']} 
+                    fontWeight="bold" 
+                    color={useColorModeValue("gray.800", "white")}
+                    marginBottom={4}
+                  >
                     Meet Athena
                   </Text>
-                  <Text fontSize={['lg', 'xl']} color={useColorModeValue("gray.600", "gray.300")}>
+                  <Text 
+                    fontSize={['lg', 'xl']} 
+                    color={useColorModeValue("gray.600", "gray.300")}
+                  >
                     Your intelligent review buddy, designed to adapt to your learning style and help you excel in your ECE
                     board exam preparation.
                   </Text>
                 </Box>
-                <Box flex="1" display="flex" justifyContent="center">
-                  <Icon as={BookOpen} boxSize={48} color={useColorModeValue("purple.500", "purple.300")} />
-                </Box>
-              </MotionFlex>
+                <Icon 
+                  as={GiSpartanHelmet} 
+                  boxSize={["150px", "200px", "250px"]} 
+                  color={useColorModeValue("purple.500", "purple.300")} 
+                />
+              </Flex>
             </Container>
           </Box>
         </FadeInWhenVisible>
