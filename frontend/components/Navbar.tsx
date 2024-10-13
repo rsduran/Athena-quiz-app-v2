@@ -19,6 +19,7 @@ import {
   MenuButton,
   MenuList,
   MenuItem,
+  Spacer,
 } from '@chakra-ui/react';
 import {
   MoonIcon,
@@ -32,9 +33,8 @@ import { getBackendUrl } from '../utils/getBackendUrl';
 
 export default function Navbar() {
   const { colorMode, toggleColorMode } = useColorMode();
-  const iconBg = useColorModeValue('white', 'gray.800');
-  const iconHoverBgLight = '#edf2f8';
-  const iconHoverBgDark = '#2c323d';
+  const linkColor = useColorModeValue('gray.600', 'gray.200');
+  const linkHoverColor = useColorModeValue('gray.800', 'white');
 
   const { isOpen, onToggle } = useDisclosure();
   const router = useRouter();
@@ -43,15 +43,8 @@ export default function Navbar() {
   const [userAvatar, setUserAvatar] = useState('');
   const [userName, setUserName] = useState('');
 
-  const chakraIconSize = 5;
-  const closeIconSize = 3.5;
-  const reactIconSize = '20px';
-
   const iconButtonStyles = {
-    bg: iconBg,
-    _hover: {
-      bg: colorMode === 'light' ? iconHoverBgLight : iconHoverBgDark,
-    },
+    variant: 'ghost',
     size: 'md',
   };
 
@@ -95,15 +88,21 @@ export default function Navbar() {
     <Box
       bg={useColorModeValue('white', 'gray.800')}
       color={useColorModeValue('black', 'white')}
-      px={4}
       borderBottom={1}
       borderStyle={'solid'}
       borderColor={useColorModeValue('gray.200', 'gray.700')}
       position="sticky"
       top={0}
       zIndex={1000}
+      px={4}
     >
-      <Flex h={16} alignItems={'center'} justifyContent={'space-between'}>
+      <Flex 
+        h={16} 
+        alignItems={'center'} 
+        justifyContent={'space-between'}
+        mx="auto"
+        maxW="1400px"
+      >
         <Flex alignItems={'center'}>
           <NextLink href="/" passHref>
             <Link
@@ -111,7 +110,7 @@ export default function Navbar() {
               display="flex"
               alignItems="center"
             >
-              <Text fontSize="2xl" fontWeight="extrabold" lineHeight="1" mb={1}>
+              <Text fontSize="2xl" fontWeight="extrabold" lineHeight="1">
                 athena.
               </Text>
             </Link>
@@ -120,10 +119,10 @@ export default function Navbar() {
           <HStack
             as={'nav'}
             spacing={4}
+            ml={8}
             display={{ base: 'none', md: 'flex' }}
-            ml={4}
           >
-            {['About', 'Contact', 'Resume', 'Email', 'Projects'].map((link) => (
+            {['ABOUT', 'CONTACT', 'RESUME', 'EMAIL', 'PROJECTS'].map((link) => (
               <NextLink href={`#${link.toLowerCase()}`} passHref key={link}>
                 <Link
                   px={2}
@@ -131,9 +130,14 @@ export default function Navbar() {
                   rounded={'md'}
                   _hover={{
                     textDecoration: 'none',
+                    color: linkHoverColor,
                     bg: useColorModeValue('gray.200', 'gray.700'),
                   }}
-                  fontSize="md"
+                  color={linkColor}
+                  fontFamily='"DM Sans Variable", sans-serif'
+                  fontWeight={700}
+                  fontSize="12px"
+                  lineHeight="14px"
                 >
                   {link}
                 </Link>
@@ -142,62 +146,38 @@ export default function Navbar() {
           </HStack>
         </Flex>
 
-        <Flex alignItems={'center'}>
-          <HStack spacing={2} mr={2} display={{ base: 'none', md: 'flex' }}>
-            <Link href="https://github.com/rsduran" isExternal>
-              <IconButton
-                aria-label="GitHub"
-                icon={<FaGithub size={reactIconSize} />}
-                {...iconButtonStyles}
-              />
-            </Link>
-            <Link
-              href="https://www.linkedin.com/in/reineir-duran-6a4791257"
-              isExternal
-            >
-              <IconButton
-                aria-label="LinkedIn"
-                icon={<FaLinkedin size={reactIconSize} />}
-                {...iconButtonStyles}
-              />
-            </Link>
-            <Link href="https://x.com/rsduran_devops" isExternal>
-              <IconButton
-                aria-label="Twitter"
-                icon={<FaTwitter size={reactIconSize} />}
-                {...iconButtonStyles}
-              />
-            </Link>
-          </HStack>
+        <Spacer />
+
+        <HStack spacing={2}>
+          <IconButton
+            aria-label="GitHub"
+            icon={<FaGithub style={{ width: '18px', height: '18px' }} />}
+            {...iconButtonStyles}
+          />
+          <IconButton
+            aria-label="LinkedIn"
+            icon={<FaLinkedin style={{ width: '18px', height: '18px' }} />}
+            {...iconButtonStyles}
+          />
+          <IconButton
+            aria-label="Twitter"
+            icon={<FaTwitter style={{ width: '18px', height: '18px' }} />}
+            {...iconButtonStyles}
+          />
 
           <IconButton
             aria-label={'Open Menu'}
-            icon={
-              isOpen ? (
-                <CloseIcon w={closeIconSize} h={closeIconSize} />
-              ) : (
-                <HamburgerIcon w={chakraIconSize} h={chakraIconSize} />
-              )
-            }
+            icon={isOpen ? <CloseIcon style={{ width: '18px', height: '18px' }} /> : <HamburgerIcon style={{ width: '18px', height: '18px' }} />}
             display={{ md: 'none' }}
             onClick={onToggle}
-            mr={2}
-            mb={1}
             {...iconButtonStyles}
           />
 
           <IconButton
             aria-label={'Toggle Dark Mode'}
-            icon={
-              colorMode === 'dark' ? (
-                <SunIcon w={chakraIconSize} h={chakraIconSize} />
-              ) : (
-                <MoonIcon w={chakraIconSize} h={chakraIconSize} />
-              )
-            }
+            icon={colorMode === 'dark' ? <SunIcon style={{ width: '18px', height: '18px' }} /> : <MoonIcon style={{ width: '18px', height: '18px' }} />}
             onClick={toggleColorMode}
             {...iconButtonStyles}
-            mr={2}
           />
 
           {isLoggedIn && (
@@ -212,18 +192,20 @@ export default function Navbar() {
                 <Avatar size={'sm'} src={userAvatar} name={userName} />
               </MenuButton>
               <MenuList>
-                <MenuItem onClick={() => router.push('/Dashboard')}>Dashboard</MenuItem>
+                <MenuItem onClick={() => router.push('/Dashboard')}>
+                  Dashboard
+                </MenuItem>
                 <MenuItem onClick={handleLogout}>Logout</MenuItem>
               </MenuList>
             </Menu>
           )}
-        </Flex>
+        </HStack>
       </Flex>
 
       <Collapse in={isOpen} animateOpacity>
         <Box pb={4} display={{ md: 'none' }}>
           <VStack as={'nav'} spacing={4}>
-            {['About', 'Contact', 'Resume', 'Email', 'Projects'].map((link) => (
+            {['ABOUT', 'CONTACT', 'RESUME', 'EMAIL', 'PROJECTS'].map((link) => (
               <NextLink href={`#${link.toLowerCase()}`} passHref key={link}>
                 <Link
                   px={2}
@@ -231,8 +213,10 @@ export default function Navbar() {
                   rounded={'md'}
                   _hover={{
                     textDecoration: 'none',
+                    color: linkHoverColor,
                     bg: useColorModeValue('gray.200', 'gray.700'),
                   }}
+                  color={linkColor}
                   fontSize="md"
                   w="100%"
                   textAlign="center"
@@ -242,31 +226,22 @@ export default function Navbar() {
               </NextLink>
             ))}
 
-            <HStack spacing={2}>
-              <Link href="https://github.com/rsduran" isExternal>
-                <IconButton
-                  aria-label="GitHub"
-                  icon={<FaGithub size={reactIconSize} />}
-                  {...iconButtonStyles}
-                />
-              </Link>
-              <Link
-                href="https://www.linkedin.com/in/reineir-duran-6a4791257"
-                isExternal
-              >
-                <IconButton
-                  aria-label="LinkedIn"
-                  icon={<FaLinkedin size={reactIconSize} />}
-                  {...iconButtonStyles}
-                />
-              </Link>
-              <Link href="https://x.com/rsduran_devops" isExternal>
-                <IconButton
-                  aria-label="Twitter"
-                  icon={<FaTwitter size={reactIconSize} />}
-                  {...iconButtonStyles}
-                />
-              </Link>
+            <HStack spacing={2} justifyContent="center" w="100%">
+              <IconButton
+                aria-label="GitHub"
+                icon={<FaGithub style={{ width: '18px', height: '18px' }} />}
+                {...iconButtonStyles}
+              />
+              <IconButton
+                aria-label="LinkedIn"
+                icon={<FaLinkedin style={{ width: '18px', height: '18px' }} />}
+                {...iconButtonStyles}
+              />
+              <IconButton
+                aria-label="Twitter"
+                icon={<FaTwitter style={{ width: '18px', height: '18px' }} />}
+                {...iconButtonStyles}
+              />
             </HStack>
           </VStack>
         </Box>
