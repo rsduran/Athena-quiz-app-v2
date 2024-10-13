@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: frontend
-          image: reinduran/frontend:23
+          image: reinduran/frontend:24
           ports:
             - containerPort: 3000
           env:
