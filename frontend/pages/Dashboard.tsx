@@ -1,6 +1,6 @@
 // Dashboard.tsx
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/router';
 import DashboardNavbar from '../components/DashboardNavbar';
 import { Box, Flex, useBreakpointValue, Spinner, Center } from '@chakra-ui/react';
@@ -16,27 +16,30 @@ const Dashboard = () => {
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
 
-  useEffect(() => {
-    const checkAuth = async () => {
-      const backendUrl = getBackendUrl();
-      try {
-        const response = await fetch(`${backendUrl}/auth/status`, {
-          credentials: 'include'
-        });
-        const data = await response.json();
-        if (!data.isLoggedIn) {
-          router.push('/signin');
-        } else {
-          setIsLoading(false);
-        }
-      } catch (error) {
-        console.error('Error checking auth status:', error);
+  const checkAuth = useCallback(async () => {
+    const backendUrl = getBackendUrl();
+    try {
+      const response = await fetch(`${backendUrl}/auth/status`, {
+        credentials: 'include'
+      });
+      const data = await response.json();
+      console.log('[DEBUG] Auth status response:', data);
+      if (!data.isLoggedIn) {
+        console.log('[DEBUG] User not logged in, redirecting to signin');
         router.push('/signin');
+      } else {
+        console.log('[DEBUG] User logged in, setting loading to false');
+        setIsLoading(false);
       }
-    };
-
-    checkAuth();
+    } catch (error) {
+      console.error('Error checking auth status:', error);
+      router.push('/signin');
+    }
   }, [router]);
+
+  useEffect(() => {
+    checkAuth();
+  }, [checkAuth]);
 
   const handleAddNewQuizSet = () => {
     setRefreshKey((oldKey) => oldKey + 1);
