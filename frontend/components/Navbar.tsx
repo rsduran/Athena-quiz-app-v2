@@ -19,7 +19,6 @@ import {
   MenuButton,
   MenuList,
   MenuItem,
-  Spacer,
 } from '@chakra-ui/react';
 import {
   MoonIcon,
@@ -35,7 +34,6 @@ export default function Navbar() {
   const { colorMode, toggleColorMode } = useColorMode();
   const linkColor = useColorModeValue('gray.600', 'gray.200');
   const linkHoverColor = useColorModeValue('gray.800', 'white');
-
   const { isOpen, onToggle } = useDisclosure();
   const router = useRouter();
 
@@ -99,9 +97,10 @@ export default function Navbar() {
       <Flex 
         h={16} 
         alignItems={'center'} 
-        justifyContent={'space-between'}
-        mx="auto"
-        maxW="1400px"
+        justifyContent={'space-between'}  // This ensures that left and right elements are pushed to the edges
+        mx="auto" 
+        maxW="100%"  // Set max width to 100% to take full width on wide screens
+        px={4}
       >
         <Flex alignItems={'center'}>
           <NextLink href="/" passHref>
@@ -146,9 +145,7 @@ export default function Navbar() {
           </HStack>
         </Flex>
 
-        <Spacer />
-
-        <HStack spacing={2}>
+        <HStack spacing={2} justifyContent="flex-end">
           <IconButton
             aria-label="GitHub"
             icon={<FaGithub style={{ width: '18px', height: '18px' }} />}
