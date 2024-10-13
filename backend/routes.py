@@ -2,6 +2,7 @@
 
 from app_init import app, db, github  # Absolute imports
 from flask import redirect, url_for, request, jsonify, session, send_file, current_app
+from werkzeug.exceptions import BadRequest
 from authlib.integrations.flask_client import OAuthError
 from models import QuizSet, Question, EditorContent, FurtherExplanation, User  # Absolute imports
 from scraping_helpers import process_question, process_pinoybix_question, process_examveda_question, process_examprimer_question, fetch_discussion_comments  # Absolute imports
@@ -681,17 +682,36 @@ def get_quiz_set_state(quiz_set_id):
 def github_login():
     print("[DEBUG] GitHub login route accessed")
     redirect_uri = url_for('github_authorized', _external=True)
+    state = secrets.token_hex(16)
+    session['oauth_state'] = state
     print(f"[DEBUG] Redirect URI: {redirect_uri}")
-    print(f"[DEBUG] GitHub OAuth URL: https://github.com/login/oauth/authorize?client_id={app.config['GITHUB_CLIENT_ID']}&redirect_uri={redirect_uri}") # Add this to inspect the full URL
-    return github.authorize_redirect(redirect_uri=redirect_uri)
+    print(f"[DEBUG] State: {state}")
+    return github.authorize_redirect(redirect_uri=redirect_uri, state=state)
 
 @app.route('/api/auth/github/callback')
 def github_authorized():
     try:
+        # Verify the state parameter
+        state = request.args.get('state')
+        if state != session.get('oauth_state'):
+            raise BadRequest("Invalid state parameter")
+        
+        # Clear the state from the session
+        session.pop('oauth_state', None)
+
+        # Exchange the code for an access token
         token = github.authorize_access_token()
+        if not token:
+            raise BadRequest("Failed to obtain access token")
+
+        # Fetch user information from GitHub
         resp = github.get('user', token=token)
         user_info = resp.json()
         
+        if 'id' not in user_info:
+            raise BadRequest("Failed to obtain user information from GitHub")
+
+        # Find or create the user in the database
         user = User.query.filter_by(github_id=str(user_info['id'])).first()
         if not user:
             user = User(
@@ -703,17 +723,24 @@ def github_authorized():
             db.session.add(user)
         else:
             user.avatar_url = user_info['avatar_url']  # Update avatar URL on each login
+        
         db.session.commit()
         
+        # Set session variables
         session['user_id'] = user.id
         session['user_name'] = user.name
         session['user_avatar'] = user.avatar_url
         
-        frontend_url = current_app.config.get('FRONTEND_URL', 'k8s-threetie-mainlb-7703746d77-255087660.ap-southeast-2.elb.amazonaws.com')
+        # Redirect to the frontend
+        frontend_url = current_app.config.get('FRONTEND_URL', 'http://k8s-threetie-mainlb-7703746d77-255087660.ap-southeast-2.elb.amazonaws.com')
         return redirect(f"{frontend_url}/Dashboard")
+
+    except BadRequest as e:
+        print(f"BadRequest in github_authorized: {str(e)}")
+        return jsonify({"error": str(e)}), 400
     except Exception as e:
         print(f"Error in github_authorized: {str(e)}")
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": "An unexpected error occurred during authentication"}), 500
 
 @app.route('/api/auth/signup', methods=['POST'])
 def signup():
