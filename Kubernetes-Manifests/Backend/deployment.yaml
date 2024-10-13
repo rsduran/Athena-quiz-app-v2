@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: backend
-          image: reinduran/backend:8
+          image: reinduran/backend:9
           ports:
             - containerPort: 5000
           env:
