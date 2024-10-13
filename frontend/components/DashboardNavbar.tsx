@@ -34,6 +34,7 @@ export default function DashboardNavbar({
   const { colorMode, toggleColorMode } = useColorMode();
   const { isOpen, onOpen, onClose } = useDisclosure();
   const [userAvatar, setUserAvatar] = useState('');
+  const [userName, setUserName] = useState('');
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -44,6 +45,7 @@ export default function DashboardNavbar({
         });
         const data = await response.json();
         if (data.isLoggedIn) {
+          setUserName(data.username);
           setUserAvatar(data.avatar);
         } else {
           router.push('/signin');
@@ -132,7 +134,7 @@ export default function DashboardNavbar({
               cursor={'pointer'}
               minW={0}
             >
-              <Avatar size={'sm'} src={userAvatar} />
+              <Avatar size={'sm'} src={userAvatar} name={userName} />
             </MenuButton>
             <MenuList>
               <MenuItem onClick={handleLogout}>Logout</MenuItem>

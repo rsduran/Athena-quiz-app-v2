@@ -3,7 +3,7 @@
 from app_init import app, db, github  # Absolute imports
 from flask import redirect, url_for, request, jsonify, session, send_file, current_app
 from authlib.integrations.flask_client import OAuthError
-from models import QuizSet, Question, EditorContent, FurtherExplanation  # Absolute imports
+from models import QuizSet, Question, EditorContent, FurtherExplanation, User  # Absolute imports
 from scraping_helpers import process_question, process_pinoybix_question, process_examveda_question, process_examprimer_question, fetch_discussion_comments  # Absolute imports
 import config  # Absolute imports
 import random
@@ -19,6 +19,7 @@ from html.parser import HTMLParser
 from models import Attempt
 from datetime import datetime
 from pytz import timezone
+import re
 import io
 
 providers_to_try = [
@@ -709,21 +710,75 @@ def github_authorized():
         print(f"[ERROR] Error in github_authorized: {str(e)}")
         return jsonify({"error": "Failed to complete GitHub authentication"}), 500
 
+@app.route('/api/auth/signup', methods=['POST'])
+def signup():
+    try:
+        data = request.json
+        name = data.get('name')
+        email = data.get('email')
+        password = data.get('password')
+
+        if not name or not email or not password:
+            return jsonify({"error": "Missing required fields"}), 400
+
+        if not re.match(r"[^@]+@[^@]+\.[^@]+", email):
+            return jsonify({"error": "Invalid email format"}), 400
+
+        if User.query.filter_by(email=email).first():
+            return jsonify({"error": "Email already registered"}), 400
+
+        new_user = User(name=name, email=email)
+        new_user.set_password(password)
+
+        db.session.add(new_user)
+        db.session.commit()
+
+        return jsonify({"message": "User registered successfully"}), 201
+    except Exception as e:
+        db.session.rollback()
+        app.logger.error(f"Error in signup: {str(e)}")
+        return jsonify({"error": "An unexpected error occurred"}), 500
+
+@app.route('/api/auth/signin', methods=['POST'])
+def signin():
+    data = request.json
+    email = data.get('email')
+    password = data.get('password')
+
+    if not email or not password:
+        return jsonify({"error": "Missing email or password"}), 400
+
+    user = User.query.filter_by(email=email).first()
+
+    if user and user.check_password(password):
+        session['user_id'] = user.id
+        session['user_name'] = user.name
+        return jsonify({
+            "message": "Logged in successfully",
+            "user": {
+                "id": user.id,
+                "name": user.name,
+                "email": user.email
+            }
+        }), 200
+    else:
+        return jsonify({"error": "Invalid email or password"}), 401
+
 @app.route('/api/auth/status')
 def auth_status():
     print(f"[DEBUG] Auth status checked. User in session: {'user_id' in session}")
     if 'user_id' in session:
-        return jsonify({
-            'isLoggedIn': True,
-            'username': session.get('user_name'),
-            'avatar': session.get('user_avatar')
-        })
+        user = User.query.get(session['user_id'])
+        if user:
+            return jsonify({
+                'isLoggedIn': True,
+                'username': user.name,
+                'avatar': session.get('user_avatar') or user.name[0].upper()  # Use GitHub avatar if available, else first letter of name
+            })
     return jsonify({'isLoggedIn': False})
 
 @app.route('/api/auth/logout', methods=['POST'])
 def logout():
     print(f"[DEBUG] Logout requested for user: {session.get('user_name')}")
-    session.pop('user_id', None)
-    session.pop('user_name', None)
-    session.pop('user_avatar', None)
+    session.clear()  # Clear all session data
     return jsonify({'message': 'Successfully logged out'})

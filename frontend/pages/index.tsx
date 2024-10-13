@@ -1,9 +1,20 @@
 // pages/index.tsx
 
 import React, { useEffect, useState } from 'react';
-import { Box, Text, Center, VStack, Button, Divider, useColorModeValue, Stack, Flex, Link as ChakraLink } from '@chakra-ui/react';
+import { 
+  Box, 
+  Text, 
+  Center, 
+  VStack, 
+  Button, 
+  Divider, 
+  useColorModeValue, 
+  Stack, 
+  Flex, 
+  Link as ChakraLink 
+} from '@chakra-ui/react';
 import { useRouter } from 'next/router';
-import { ChevronRightIcon } from '@chakra-ui/icons'; // Importing the ChevronRightIcon
+import { ChevronRightIcon } from '@chakra-ui/icons';
 import Navbar from '../components/Navbar';
 import LoadingLayout from '../components/LoadingLayout';
 import { getBackendUrl } from '../utils/getBackendUrl';
@@ -38,9 +49,9 @@ export default function HomePage() {
 
   return (
     <LoadingLayout>
-      <>
+      <Flex flexDirection="column" minHeight="100vh">
         <Navbar />
-        <VStack spacing={[2, 4, 6]} mt={[5, 10]} align="stretch" minHeight="calc(100vh - 64px)">
+        <VStack spacing={[2, 4, 6]} mt={[5, 10]} align="stretch" flex={1}>
           <Center>
             <VStack spacing={0}>
               <Text
@@ -94,7 +105,7 @@ export default function HomePage() {
                     bg={useColorModeValue('black', 'white')}
                     color={useColorModeValue('white', 'black')}
                     _hover={{ bg: useColorModeValue('gray.700', 'gray.300') }}
-                    rightIcon={<ChevronRightIcon />} // ChevronRightIcon added here
+                    rightIcon={<ChevronRightIcon />}
                   >
                     Go to Dashboard
                   </Button>
@@ -117,47 +128,53 @@ export default function HomePage() {
                   bg={useColorModeValue('black', 'white')}
                   color={useColorModeValue('white', 'black')}
                   _hover={{ bg: useColorModeValue('gray.700', 'gray.300') }}
-                  rightIcon={<ChevronRightIcon />} // ChevronRightIcon added here
+                  rightIcon={<ChevronRightIcon />}
                 >
                   Go to Dashboard
                 </Button>
               )}
             </Stack>
           </Center>
-
-          <Flex flex={1} />
-
-          {/* Footer */}
-          <Divider my={[2, 4]} />
-          <Flex as="footer" w="full" py={2} alignItems="center" justifyContent="center">
-            <Text
-              fontSize="sm"
-              textAlign="center"
-              color={useColorModeValue('gray.600', 'gray.200')}
-            >
-              Built by{' '}
-              <ChakraLink
-                href="https://github.com/rsduran"
-                isExternal
-                textDecoration="underline"
-                color={useColorModeValue('black', 'white')}
-              >
-                rsduran
-              </ChakraLink>
-              . The source code is available on{' '}
-              <ChakraLink
-                href="https://github.com/rsduran/athena-cli"
-                isExternal
-                textDecoration="underline"
-                color={useColorModeValue('black', 'white')}
-              >
-                GitHub
-              </ChakraLink>
-              .
-            </Text>
-          </Flex>
         </VStack>
-      </>
+        
+        {/* Updated Footer */}
+        <Flex 
+          as="footer" 
+          w="full" 
+          py={4} 
+          borderTop={1}
+          borderStyle={'solid'}
+          borderColor={useColorModeValue('gray.200', 'gray.700')}
+          justifyContent="center" 
+          alignItems="center"
+        >
+          <Text
+            fontSize="sm"
+            textAlign="center"
+            color={useColorModeValue('gray.600', 'gray.200')}
+          >
+            Built by{' '}
+            <ChakraLink
+              href="https://github.com/rsduran"
+              isExternal
+              textDecoration="underline"
+              color={useColorModeValue('black', 'white')}
+            >
+              rsduran
+            </ChakraLink>
+            . The source code is available on{' '}
+            <ChakraLink
+              href="https://github.com/rsduran/athena-cli"
+              isExternal
+              textDecoration="underline"
+              color={useColorModeValue('black', 'white')}
+            >
+              GitHub
+            </ChakraLink>
+            .
+          </Text>
+        </Flex>
+      </Flex>
     </LoadingLayout>
   );
 }

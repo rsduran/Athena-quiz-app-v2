@@ -1,12 +1,17 @@
 // pages/signin.tsx
 
 import React, { useState } from 'react';
-import { Box, Button, VStack, Text, Input, InputGroup, InputRightElement, Divider, useColorModeValue, Link } from '@chakra-ui/react';
+import { Box, Button, VStack, Text, Input, InputGroup, InputRightElement, Divider, useColorModeValue, Link, useToast } from '@chakra-ui/react';
 import { FaGithub, FaEye, FaEyeSlash } from 'react-icons/fa';
 import { getBackendUrl } from '../utils/getBackendUrl';
+import { useRouter } from 'next/router';
 
 export default function SignIn() {
   const [showPassword, setShowPassword] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const toast = useToast();
+  const router = useRouter();
 
   const handleGitHubAuth = () => {
     const backendUrl = getBackendUrl();
@@ -16,6 +21,49 @@ export default function SignIn() {
 
   const togglePasswordVisibility = () => {
     setShowPassword(!showPassword);
+  };
+
+  const handleSignIn = async () => {
+    const backendUrl = getBackendUrl();
+    try {
+      const response = await fetch(`${backendUrl}/auth/signin`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
+        credentials: 'include',
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        toast({
+          title: 'Signed in successfully',
+          status: 'success',
+          duration: 3000,
+          isClosable: true,
+        });
+        router.push('/Dashboard');
+      } else {
+        toast({
+          title: 'Error',
+          description: data.error,
+          status: 'error',
+          duration: 3000,
+          isClosable: true,
+        });
+      }
+    } catch (error) {
+      console.error('Error signing in:', error);
+      toast({
+        title: 'Error',
+        description: 'An unexpected error occurred',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      });
+    }
   };
 
   return (
@@ -47,7 +95,13 @@ export default function SignIn() {
               <Text mb={1} fontSize="sm" fontWeight="medium">
                 Email
               </Text>
-              <Input id="email" type="email" placeholder="name@example.com" />
+              <Input 
+                id="email" 
+                type="email" 
+                placeholder="name@example.com" 
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
             </Box>
             <Box>
               <Text mb={1} fontSize="sm" fontWeight="medium">
@@ -57,6 +111,8 @@ export default function SignIn() {
                 <Input
                   id="password"
                   type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
                 />
                 <InputRightElement>
                   <Button variant="ghost" onClick={togglePasswordVisibility}>
@@ -66,7 +122,7 @@ export default function SignIn() {
               </InputGroup>
             </Box>
           </VStack>
-          <Button colorScheme="blue" size="lg" w="full">
+          <Button colorScheme="blue" size="lg" w="full" onClick={handleSignIn}>
             Sign In
           </Button>
           <Divider my={4} />

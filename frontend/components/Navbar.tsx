@@ -41,6 +41,7 @@ export default function Navbar() {
 
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userAvatar, setUserAvatar] = useState('');
+  const [userName, setUserName] = useState('');
 
   const chakraIconSize = 5;
   const closeIconSize = 3.5;
@@ -63,7 +64,10 @@ export default function Navbar() {
         });
         const data = await response.json();
         setIsLoggedIn(data.isLoggedIn);
-        setUserAvatar(data.avatar || '');
+        if (data.isLoggedIn) {
+          setUserName(data.username);
+          setUserAvatar(data.avatar);
+        }
       } catch (error) {
         console.error('Error checking auth status:', error);
       }
@@ -80,6 +84,7 @@ export default function Navbar() {
       });
       setIsLoggedIn(false);
       setUserAvatar('');
+      setUserName('');
       window.location.href = '/';
     } catch (error) {
       console.error('Error logging out:', error);
@@ -204,7 +209,7 @@ export default function Navbar() {
                 cursor={'pointer'}
                 minW={0}
               >
-                <Avatar size={'sm'} src={userAvatar} />
+                <Avatar size={'sm'} src={userAvatar} name={userName} />
               </MenuButton>
               <MenuList>
                 <MenuItem onClick={() => router.push('/Dashboard')}>Dashboard</MenuItem>
