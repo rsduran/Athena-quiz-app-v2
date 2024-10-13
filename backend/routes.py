@@ -22,6 +22,7 @@ from datetime import datetime
 from pytz import timezone
 import re
 import io
+import secrets
 
 providers_to_try = [
     Provider.Bing,
@@ -685,7 +686,7 @@ def github_login():
     state = secrets.token_hex(16)
     session['oauth_state'] = state
     print(f"[DEBUG] Redirect URI: {redirect_uri}")
-    print(f"[DEBUG] State: {state}")
+    print(f"[DEBUG] Generated state: {state}")
     return github.authorize_redirect(redirect_uri=redirect_uri, state=state)
 
 @app.route('/api/auth/github/callback')
