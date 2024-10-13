@@ -20,16 +20,26 @@ spec:
             - containerPort: 5000
           env:
             - name: DB_HOST
-              value: "postgres"  # Use the service name from the database YAML
+              value: "postgres"
             - name: DB_NAME
               value: "quizdb"
             - name: DB_USER
               valueFrom:
                 secretKeyRef:
-                  name: postgres-secret  # Matches the secret in the database YAML
+                  name: postgres-secret
                   key: postgres-user
             - name: DB_PASS
               valueFrom:
                 secretKeyRef:
-                  name: postgres-secret  # Matches the secret in the database YAML
+                  name: postgres-secret
                   key: postgres-password
+            - name: GITHUB_CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: oauth-secrets
+                  key: github-client-id
+            - name: GITHUB_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: oauth-secrets
+                  key: github-client-secret

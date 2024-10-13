@@ -5,11 +5,7 @@ from flask import Flask
 from authlib.integrations.flask_client import OAuth
 from flask_cors import CORS
 from db import db
-from dotenv import load_dotenv
 from datetime import timedelta
-
-# Load environment variables
-load_dotenv()
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -23,21 +19,24 @@ app.config['GITHUB_CLIENT_SECRET'] = os.environ.get('GITHUB_CLIENT_SECRET')
 app.config['FRONTEND_URL'] = os.getenv('FRONTEND_URL', 'http://localhost:3000')
 
 print(f"[DEBUG] GitHub Client ID: {app.config['GITHUB_CLIENT_ID']}")
-print(f"[DEBUG] GitHub Client Secret: {'*' * len(app.config['GITHUB_CLIENT_SECRET'])}")
+print(f"[DEBUG] GitHub Client Secret: {'*' * len(app.config['GITHUB_CLIENT_SECRET'] or '')}")
 print(f"[DEBUG] Frontend URL: {app.config['FRONTEND_URL']}")
 
-# Register GitHub OAuth
-github = oauth.register(
-    name='github',
-    client_id=app.config['GITHUB_CLIENT_ID'],
-    client_secret=app.config['GITHUB_CLIENT_SECRET'],
-    access_token_url='https://github.com/login/oauth/access_token',
-    access_token_params=None,
-    authorize_url='https://github.com/login/oauth/authorize',
-    authorize_params=None,
-    api_base_url='https://api.github.com/',
-    client_kwargs={'scope': 'user:email'},
-)
+# Register GitHub OAuth only if both client ID and secret are available
+if app.config['GITHUB_CLIENT_ID'] and app.config['GITHUB_CLIENT_SECRET']:
+    github = oauth.register(
+        name='github',
+        client_id=app.config['GITHUB_CLIENT_ID'],
+        client_secret=app.config['GITHUB_CLIENT_SECRET'],
+        access_token_url='https://github.com/login/oauth/access_token',
+        access_token_params=None,
+        authorize_url='https://github.com/login/oauth/authorize',
+        authorize_params=None,
+        api_base_url='https://api.github.com/',
+        client_kwargs={'scope': 'user:email'},
+    )
+else:
+    print("[WARNING] GitHub OAuth is not configured. Some features may not work.")
 
 # Set secret key
 app.secret_key = os.getenv('SECRET_KEY', 'your_default_secret_key')
