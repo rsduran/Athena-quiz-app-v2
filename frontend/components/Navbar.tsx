@@ -19,6 +19,7 @@ import {
   MenuButton,
   MenuList,
   MenuItem,
+  useBreakpointValue,
 } from '@chakra-ui/react';
 import {
   MoonIcon,
@@ -40,6 +41,8 @@ export default function Navbar() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userAvatar, setUserAvatar] = useState('');
   const [userName, setUserName] = useState('');
+
+  const isMobile = useBreakpointValue({ base: true, md: false });
 
   const iconButtonStyles = {
     variant: 'ghost',
@@ -97,9 +100,9 @@ export default function Navbar() {
       <Flex 
         h={16} 
         alignItems={'center'} 
-        justifyContent={'space-between'}  // This ensures that left and right elements are pushed to the edges
+        justifyContent={'space-between'}
         mx="auto" 
-        maxW="100%"  // Set max width to 100% to take full width on wide screens
+        maxW="100%"
         px={4}
       >
         <Flex alignItems={'center'}>
@@ -146,27 +149,31 @@ export default function Navbar() {
         </Flex>
 
         <HStack spacing={2} justifyContent="flex-end">
-          <IconButton
-            aria-label="GitHub"
-            icon={<FaGithub style={{ width: '18px', height: '18px' }} />}
-            {...iconButtonStyles}
-          />
-          <IconButton
-            aria-label="LinkedIn"
-            icon={<FaLinkedin style={{ width: '18px', height: '18px' }} />}
-            {...iconButtonStyles}
-          />
-          <IconButton
-            aria-label="Twitter"
-            icon={<FaTwitter style={{ width: '18px', height: '18px' }} />}
-            {...iconButtonStyles}
-          />
+          {!isMobile && (
+            <>
+              <IconButton
+                aria-label="GitHub"
+                icon={<FaGithub style={{ width: '18px', height: '18px' }} />}
+                {...iconButtonStyles}
+              />
+              <IconButton
+                aria-label="LinkedIn"
+                icon={<FaLinkedin style={{ width: '18px', height: '18px' }} />}
+                {...iconButtonStyles}
+              />
+              <IconButton
+                aria-label="Twitter"
+                icon={<FaTwitter style={{ width: '18px', height: '18px' }} />}
+                {...iconButtonStyles}
+              />
+            </>
+          )}
 
           <IconButton
             aria-label={'Open Menu'}
             icon={isOpen ? <CloseIcon style={{ width: '18px', height: '18px' }} /> : <HamburgerIcon style={{ width: '18px', height: '18px' }} />}
-            display={{ md: 'none' }}
             onClick={onToggle}
+            display={{ md: 'none' }}
             {...iconButtonStyles}
           />
 

@@ -2,20 +2,8 @@
 
 import React, { useEffect, useState } from 'react';
 import {
-  Box,
-  Flex,
-  IconButton,
-  Text,
-  useDisclosure,
-  useColorMode,
-  useColorModeValue,
-  HStack,
-  Spacer,
-  Avatar,
-  Menu,
-  MenuButton,
-  MenuList,
-  MenuItem,
+  Box, Flex, IconButton, Text, useDisclosure, useColorMode, useColorModeValue,
+  HStack, Avatar, Menu, MenuButton, MenuList, MenuItem,
 } from '@chakra-ui/react';
 import { MoonIcon, SunIcon } from '@chakra-ui/icons';
 import { PlusIcon, ExitIcon } from '@radix-ui/react-icons';
@@ -27,9 +15,7 @@ interface DashboardNavbarProps {
   onAddNewQuizSet: (newQuizSetTitle: string) => void;
 }
 
-export default function DashboardNavbar({
-  onAddNewQuizSet,
-}: DashboardNavbarProps) {
+export default function DashboardNavbar({ onAddNewQuizSet }: DashboardNavbarProps) {
   const router = useRouter();
   const { colorMode, toggleColorMode } = useColorMode();
   const { isOpen, onOpen, onClose } = useDisclosure();
@@ -40,9 +26,7 @@ export default function DashboardNavbar({
     const fetchUserData = async () => {
       const backendUrl = getBackendUrl();
       try {
-        const response = await fetch(`${backendUrl}/auth/status`, {
-          credentials: 'include'
-        });
+        const response = await fetch(`${backendUrl}/auth/status`, { credentials: 'include' });
         const data = await response.json();
         if (data.isLoggedIn) {
           setUserName(data.username);
@@ -60,10 +44,7 @@ export default function DashboardNavbar({
   const handleLogout = async () => {
     const backendUrl = getBackendUrl();
     try {
-      await fetch(`${backendUrl}/auth/logout`, { 
-        method: 'POST',
-        credentials: 'include'
-      });
+      await fetch(`${backendUrl}/auth/logout`, { method: 'POST', credentials: 'include' });
       window.location.href = '/';
     } catch (error) {
       console.error('Error logging out:', error);
@@ -82,16 +63,12 @@ export default function DashboardNavbar({
       top={0}
       zIndex={1000}
     >
-      <Flex h={16} alignItems={'center'}>
+      <Flex h={16} alignItems={'center'} justifyContent="space-between">
         <Flex alignItems={'center'}>
           <IconButton
             icon={
               <ExitIcon
-                style={{
-                  transform: 'scaleX(-1)',
-                  width: '20px',
-                  height: '20px',
-                }}
+                style={{ transform: 'scaleX(-1)', width: '20px', height: '20px' }}
               />
             }
             onClick={() => window.location.href = '/'}
@@ -109,8 +86,6 @@ export default function DashboardNavbar({
           </Text>
         </Flex>
 
-        <Spacer />
-
         <HStack spacing={2}>
           <IconButton
             icon={<PlusIcon style={{ width: '22px', height: '22px' }} />}
@@ -118,14 +93,12 @@ export default function DashboardNavbar({
             aria-label="Add Quiz Set"
             variant={'ghost'}
           />
-
           <IconButton
             icon={colorMode === 'dark' ? <SunIcon /> : <MoonIcon />}
             onClick={toggleColorMode}
             variant={'ghost'}
             aria-label={'Toggle Dark Mode'}
           />
-
           <Menu>
             <MenuButton
               as={IconButton}
@@ -143,11 +116,7 @@ export default function DashboardNavbar({
         </HStack>
       </Flex>
 
-      <QuizSetModal
-        isOpen={isOpen}
-        onClose={onClose}
-        onAddNewQuizSet={onAddNewQuizSet}
-      />
+      <QuizSetModal isOpen={isOpen} onClose={onClose} onAddNewQuizSet={onAddNewQuizSet} />
     </Box>
   );
 }

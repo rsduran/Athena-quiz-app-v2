@@ -40,6 +40,8 @@ import {
   MenuList,
   MenuItem,
   Icon,
+  VStack,
+  HStack,
 } from '@chakra-ui/react';
 import {
   ExternalLinkIcon,
@@ -52,32 +54,27 @@ import { getBackendUrl } from '@/utils/getBackendUrl';
 import { QuizSet } from '@/utils/types';
 import QuizTableSkeleton from './QuizTableSkeleton';
 
-const DynamicQuizTable = () => {
-  // State hooks
+const DynamicQuizTable: React.FC = () => {
   const [quizSets, setQuizSets] = useState<QuizSet[]>([]);
   const [checkedItems, setCheckedItems] = useState<{ [key: string]: boolean }>({});
-  const [selectedRawUrls, setSelectedRawUrls] = useState('');
+  const [selectedRawUrls, setSelectedRawUrls] = useState<string>('');
   const [editingTitleId, setEditingTitleId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState<string>('');
   const [deleteQuizSetId, setDeleteQuizSetId] = useState<string | null>(null);
-  const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
-  const [isDeleteMultipleAlertOpen, setIsDeleteMultipleAlertOpen] = useState(false);
-  const [isDeleteAllAlertOpen, setIsDeleteAllAlertOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isUrlsModalOpen, setIsUrlsModalOpen] = useState(false);
+  const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState<boolean>(false);
+  const [isDeleteMultipleAlertOpen, setIsDeleteMultipleAlertOpen] = useState<boolean>(false);
+  const [isDeleteAllAlertOpen, setIsDeleteAllAlertOpen] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isUrlsModalOpen, setIsUrlsModalOpen] = useState<boolean>(false);
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
-  const [quizSetCount, setQuizSetCount] = useState(0);
+  const [quizSetCount, setQuizSetCount] = useState<number>(0);
 
-  // Ref hooks
   const cancelRef = useRef<HTMLButtonElement>(null);
-
-  // Custom hooks
   const toast = useToast();
   const backendUrl = getBackendUrl();
   const isMobile = useBreakpointValue({ base: true, md: false });
   const borderColor = useColorModeValue('gray.200', 'gray.700');
 
-  // Effect hooks
   useEffect(() => {
     fetchQuizSets();
     fetchSortOrder();
@@ -91,7 +88,7 @@ const DynamicQuizTable = () => {
   }, []);
 
   useEffect(() => {
-    const validQuizSetIds = new Set(quizSets.map((qs) => qs.id));
+    const validQuizSetIds = new Set(quizSets.map((quizSet) => quizSet.id));
     const newCheckedItems = Object.fromEntries(
       Object.entries(checkedItems).filter(([id]) => validQuizSetIds.has(id))
     );
@@ -99,7 +96,6 @@ const DynamicQuizTable = () => {
     localStorage.setItem('checkedItems', JSON.stringify(newCheckedItems));
   }, [quizSets, checkedItems]);
 
-  // Callback hooks
   const fetchSortOrder = useCallback(async () => {
     try {
       const response = await fetch(`${backendUrl}/getSortOrder`);
@@ -143,11 +139,11 @@ const DynamicQuizTable = () => {
     }
   }, [backendUrl]);
 
-  const handleParentCheckboxChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const isChecked = e.target.checked;
-    const newCheckedItems = quizSets.reduce<{ [key: string]: boolean }>((acc, quizSet) => {
-      acc[quizSet.id] = isChecked;
-      return acc;
+  const handleParentCheckboxChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    const isChecked = event.target.checked;
+    const newCheckedItems = quizSets.reduce<{ [key: string]: boolean }>((accumulator, quizSet) => {
+      accumulator[quizSet.id] = isChecked;
+      return accumulator;
     }, {});
     setCheckedItems(newCheckedItems);
     localStorage.setItem('checkedItems', JSON.stringify(newCheckedItems));
@@ -179,8 +175,8 @@ const DynamicQuizTable = () => {
       });
       if (response.ok) {
         setQuizSets(prevQuizSets =>
-          prevQuizSets.map((qs) =>
-            qs.id === quizSetId ? { ...qs, title: newTitle } : qs
+          prevQuizSets.map((quizSet) =>
+            quizSet.id === quizSetId ? { ...quizSet, title: newTitle } : quizSet
           )
         );
       }
@@ -209,7 +205,7 @@ const DynamicQuizTable = () => {
           method: 'DELETE',
         });
         if (response.ok) {
-          setQuizSets(prevQuizSets => prevQuizSets.filter((qs) => qs.id !== deleteQuizSetId));
+          setQuizSets(prevQuizSets => prevQuizSets.filter((quizSet) => quizSet.id !== deleteQuizSetId));
           setCheckedItems(prevItems => {
             const updatedCheckedItems = { ...prevItems };
             delete updatedCheckedItems[deleteQuizSetId];
@@ -245,7 +241,7 @@ const DynamicQuizTable = () => {
         body: JSON.stringify({ quizSetIds: selectedQuizSetIds }),
       });
       if (response.ok) {
-        setQuizSets(prevQuizSets => prevQuizSets.filter(qs => !selectedQuizSetIds.includes(qs.id)));
+        setQuizSets(prevQuizSets => prevQuizSets.filter(quizSet => !selectedQuizSetIds.includes(quizSet.id)));
         setCheckedItems(prevItems => {
           const updatedCheckedItems = { ...prevItems };
           selectedQuizSetIds.forEach(id => delete updatedCheckedItems[id]);
@@ -323,7 +319,6 @@ const DynamicQuizTable = () => {
     }
   }, [backendUrl, sortOrder]);
 
-  // Memoized functions
   const calculateGrade = useCallback((score: number, totalQuestions: number): string => {
     if (totalQuestions === 0) return 'N/A';
     const percentage = Math.round((score / totalQuestions) * 100);
@@ -374,7 +369,6 @@ const DynamicQuizTable = () => {
     }
   }, []);
 
-  // Memoized values
   const sortedQuizSets = useMemo(() => {
     return [...quizSets].sort((a, b) => {
       if (sortOrder === 'desc') {
@@ -395,7 +389,6 @@ const DynamicQuizTable = () => {
     [quizSets, checkedItems, allChecked]
   );
 
-  // Render function for quiz set rows
   const renderQuizSetRow = useCallback((quizSet: QuizSet) => (
     <Tr key={quizSet.id}>
       <Td textAlign="center">
@@ -413,7 +406,7 @@ const DynamicQuizTable = () => {
             onKeyDown={(e) => handleKeyPress(e, quizSet.id)}
             autoFocus
             size="sm"
-            maxW="150px"
+            maxWidth="150px"
           />
         ) : (
           <Link href={`/QuizModePage/${quizSet.id}`} isExternal textAlign="center">
@@ -432,7 +425,7 @@ const DynamicQuizTable = () => {
       <Td>
         <Flex direction="column" alignItems="center">
           {renderProgressBadge(quizSet.progress, quizSet.finished)}
-          <Box position="relative" width="80%" mt={1}>
+          <Box position="relative" width="80%" marginTop={1}>
             <Progress
               value={quizSet.finished ? 100 : quizSet.progress}
               size="md"
@@ -448,7 +441,7 @@ const DynamicQuizTable = () => {
               {quizSet.finished ? '100%' : `${quizSet.progress}%`}
             </Text>
           </Box>
-          <Text fontSize="sm" mt={1}>
+          <Text fontSize="sm" marginTop={1}>
             {quizSet.unanswered_questions} unanswered q's
           </Text>
         </Flex>
@@ -465,7 +458,7 @@ const DynamicQuizTable = () => {
               icon={<GoKebabHorizontal />}
               variant="ghost"
               size="sm"
-              _hover={{ bg: useColorModeValue('gray.100', 'gray.700') }}
+              _hover={{ backgroundColor: useColorModeValue('gray.100', 'gray.700') }}
             />
             <MenuList>
               <MenuItem
@@ -508,11 +501,147 @@ const DynamicQuizTable = () => {
     useColorModeValue
   ]);
 
+  const renderMobileCard = useCallback((quizSet: QuizSet) => (
+    <Box
+      key={quizSet.id}
+      borderWidth="1px"
+      borderRadius="lg"
+      padding={4}
+      marginBottom={4}
+      backgroundColor={checkedItems[quizSet.id] ? useColorModeValue('gray.100', 'gray.700') : 'inherit'}
+    >
+      <VStack align="stretch" spacing={3}>
+        <HStack justify="space-between">
+          <Checkbox
+            isChecked={checkedItems[quizSet.id]}
+            onChange={(e) => handleChildCheckboxChange(quizSet.id, e.target.checked)}
+          />
+          <Menu>
+            <MenuButton
+              as={IconButton}
+              icon={<GoKebabHorizontal />}
+              variant="ghost"
+              size="sm"
+            />
+            <MenuList>
+              <MenuItem
+                icon={<ExternalLinkIcon />}
+                onClick={() => handleOpenUrlsModal(quizSet.id)}
+              >
+                Show URLs
+              </MenuItem>
+              <MenuItem
+                icon={<EditIcon />}
+                onClick={() => handleEditStart(quizSet)}
+              >
+                Edit Quiz Title
+              </MenuItem>
+              <MenuItem
+                icon={<DeleteIcon />}
+                onClick={() => onOpenDeleteAlert(quizSet.id)}
+              >
+                Delete Quiz Set
+              </MenuItem>
+            </MenuList>
+          </Menu>
+        </HStack>
+  
+        <Box>
+          {editingTitleId === quizSet.id ? (
+            <Input
+              value={editingTitle}
+              onChange={handleEditChange}
+              onBlur={() => handleRename(quizSet.id, editingTitle)}
+              onKeyDown={(e) => handleKeyPress(e, quizSet.id)}
+              autoFocus
+              size="sm"
+            />
+          ) : (
+            <Link href={`/QuizModePage/${quizSet.id}`} isExternal fontWeight="bold">
+              {quizSet.title}
+            </Link>
+          )}
+        </Box>
+  
+        <HStack justify="space-between">
+          <Text fontSize="sm">Attempt No. {quizSet.attempts}</Text>
+          <Text fontSize="sm">
+            Avg. Score: {quizSet.average_score !== undefined && quizSet.average_score !== null && quizSet.total_questions > 0
+              ? `${quizSet.average_score.toFixed(2)} (${((quizSet.average_score / quizSet.total_questions) * 100).toFixed(2)}%)`
+              : 'N/A'}
+          </Text>
+        </HStack>
+  
+        <Box>
+          <HStack justify="space-between" align="center" marginBottom={1}>
+            <Text fontSize="sm" fontWeight="bold">Progress:</Text>
+            <Badge
+              colorScheme={quizSet.finished ? "green" : (quizSet.progress > 0 ? "yellow" : "gray")}
+            >
+              {quizSet.finished ? 'FINISHED' : (quizSet.progress > 0 ? 'IN PROGRESS' : 'NOT STARTED')}
+            </Badge>
+          </HStack>
+          <Box position="relative">
+            <Progress
+              value={quizSet.finished ? 100 : quizSet.progress}
+              size="md"
+              colorScheme="teal"
+            />
+            <Text
+              position="absolute"
+              top="50%"
+              left="50%"
+              transform="translate(-50%, -50%)"
+              fontSize="xs"
+              fontWeight="bold"
+              color="white"
+            >
+              {quizSet.finished ? '100%' : `${quizSet.progress}%`}
+            </Text>
+          </Box>
+        </Box>
+  
+        <HStack justify="space-between" align="center">
+          <Text fontSize="sm" fontWeight="bold">Latest Grade:</Text>
+          {quizSet.attempts === 0 || quizSet.latest_score === null ? (
+            <Text fontSize="sm">NOT ATTEMPTED</Text>
+          ) : (
+            <HStack spacing={2} align="center">
+              <Badge colorScheme={quizSet.latest_score / quizSet.total_questions >= 0.7 ? "green" : "red"}>
+                {quizSet.latest_score / quizSet.total_questions >= 0.7 ? "PASS" : "FAIL"}
+              </Badge>
+              <Text fontSize="sm">{quizSet.latest_score}/{quizSet.total_questions}</Text>
+              <Text fontSize="sm">({Math.round((quizSet.latest_score / quizSet.total_questions) * 100)}%)</Text>
+            </HStack>
+          )}
+        </HStack>
+  
+        <HStack justify="space-between" align="center">
+          <Text fontSize="sm" fontWeight="bold">Updated:</Text>
+          <Text fontSize="sm">{formatRelativeTime(quizSet.last_updated)}</Text>
+        </HStack>
+      </VStack>
+    </Box>
+  ), [
+    checkedItems,
+    editingTitleId,
+    editingTitle,
+    handleChildCheckboxChange,
+    handleOpenUrlsModal,
+    handleEditStart,
+    onOpenDeleteAlert,
+    handleEditChange,
+    handleRename,
+    handleKeyPress,
+    formatRelativeTime,
+    useColorModeValue
+  ]);
+
   return (
     <Box
       width={['95%', '90%', '80%']}
-      mx="auto"
-      mt={5}
+      marginX="auto"
+      marginTop={5}
       border="1px"
       borderColor={borderColor}
       borderRadius="md"
@@ -521,13 +650,13 @@ const DynamicQuizTable = () => {
       {isLoading ? (
         <QuizTableSkeleton quizSetCount={quizSetCount} />
       ) : sortedQuizSets.length === 0 ? (
-        <Box p={4} textAlign="center">
+        <Box padding={4} textAlign="center">
           <Text fontSize="xl" fontWeight="bold">No quiz sets available.</Text>
-          <Text mt={2}>Please add a new quiz set to get started.</Text>
+          <Text marginTop={2}>Please add a new quiz set to get started.</Text>
         </Box>
       ) : (
         <>
-          <Flex justifyContent="space-between" p={4}>
+          <Flex justifyContent="space-between" padding={4}>
             <Button
               colorScheme="red"
               onClick={() => setIsDeleteMultipleAlertOpen(true)}
@@ -540,37 +669,43 @@ const DynamicQuizTable = () => {
             </Button>
           </Flex>
 
-          <Table variant="simple">
-            <Thead>
-              <Tr>
-                <Th textAlign="center">
-                  <Checkbox
-                    isChecked={allChecked}
-                    isIndeterminate={isIndeterminate}
-                    onChange={handleParentCheckboxChange}
-                  />
-                </Th>
-                <Th textAlign="center">Quiz Set</Th>
-                <Th textAlign="center">Attempts</Th>
-                <Th textAlign="center">Progress</Th>
-                <Th textAlign="center">Latest Grade</Th>
-                <Th>
-                  <Flex alignItems="center" justifyContent="center">
-                    <Text mr={2}>Updated</Text>
-                    <Icon
-                      as={sortOrder === 'asc' ? GoSortAsc : GoSortDesc}
-                      onClick={toggleSortOrder}
-                      cursor="pointer"
+          {isMobile ? (
+            <VStack spacing={4} align="stretch" paddingX={4}>
+              {sortedQuizSets.map(renderMobileCard)}
+            </VStack>
+          ) : (
+            <Table variant="simple">
+              <Thead>
+                <Tr>
+                  <Th textAlign="center">
+                    <Checkbox
+                      isChecked={allChecked}
+                      isIndeterminate={isIndeterminate}
+                      onChange={handleParentCheckboxChange}
                     />
-                  </Flex>
-                </Th>
-                <Th textAlign="center">Actions</Th>
-              </Tr>
-            </Thead>
-            <Tbody>
-              {sortedQuizSets.map(renderQuizSetRow)}
-            </Tbody>
-          </Table>
+                  </Th>
+                  <Th textAlign="center">Quiz Set</Th>
+                  <Th textAlign="center">Attempts</Th>
+                  <Th textAlign="center">Progress</Th>
+                  <Th textAlign="center">Latest Grade</Th>
+                  <Th>
+                    <Flex alignItems="center" justifyContent="center">
+                      <Text marginRight={2}>Updated</Text>
+                      <Icon
+                        as={sortOrder === 'asc' ? GoSortAsc : GoSortDesc}
+                        onClick={toggleSortOrder}
+                        cursor="pointer"
+                      />
+                    </Flex>
+                  </Th>
+                  <Th textAlign="center">Actions</Th>
+                </Tr>
+              </Thead>
+              <Tbody>
+                {sortedQuizSets.map(renderQuizSetRow)}
+              </Tbody>
+            </Table>
+          )}
         </>
       )}
 
@@ -597,7 +732,7 @@ const DynamicQuizTable = () => {
               <Button ref={cancelRef} onClick={() => setIsDeleteAlertOpen(false)}>
                 Cancel
               </Button>
-              <Button colorScheme="red" onClick={handleDeleteQuizSet} ml={3}>
+              <Button colorScheme="red" onClick={handleDeleteQuizSet} marginLeft={3}>
                 Delete
               </Button>
             </AlertDialogFooter>
@@ -622,7 +757,7 @@ const DynamicQuizTable = () => {
               <Button ref={cancelRef} onClick={() => setIsDeleteMultipleAlertOpen(false)}>
                 Cancel
               </Button>
-              <Button colorScheme="red" onClick={handleDeleteMultipleQuizSets} ml={3}>
+              <Button colorScheme="red" onClick={handleDeleteMultipleQuizSets} marginLeft={3}>
                 Delete
               </Button>
             </AlertDialogFooter>
@@ -647,7 +782,7 @@ const DynamicQuizTable = () => {
               <Button ref={cancelRef} onClick={() => setIsDeleteAllAlertOpen(false)}>
                 Cancel
               </Button>
-              <Button colorScheme="red" onClick={handleDeleteAllQuizSets} ml={3}>
+              <Button colorScheme="red" onClick={handleDeleteAllQuizSets} marginLeft={3}>
                 Delete All
               </Button>
             </AlertDialogFooter>

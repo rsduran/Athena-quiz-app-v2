@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Flex,
   IconButton,
@@ -33,6 +33,10 @@ const QuizHeader: React.FC<QuizHeaderProps> = ({ state, actions, navigation, Mob
   const iconBg = useColorModeValue('white', 'transparent');
   const iconHoverBg = useColorModeValue('#edf2f8', '#2c323d');
   const isMobile = useBreakpointValue({ base: true, md: false });
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+
+  const onDrawerOpen = () => setIsDrawerOpen(true);
+  const onDrawerClose = () => setIsDrawerOpen(false);
 
   return (
     <Flex
@@ -106,41 +110,44 @@ const QuizHeader: React.FC<QuizHeaderProps> = ({ state, actions, navigation, Mob
         )}
       </Flex>
 
-        {/* Middle Part for question navigation */}
-        <Flex
-          position="absolute"
-          left="50%"
-          transform="translateX(-50%)"
-          align="center"
-        >
-          {/* Question Navigation Input */}
-          <Input
-            type="number"
-            value={state.currentQuestionIndex + 1}
-            onChange={(e) => navigation.handleNavigate('goto', Number(e.target.value))}
-            width="75px"
-            marginRight={2}
-            fontSize="15px"
-            textAlign="center"
-          />
-          <Text marginX={2} fontSize="15px">
-            / {state.filteredQuestions.length}
-          </Text>
-        </Flex>
-
-        {/* Right Part */}
-        <Flex align="center" gap={2}>
-          {isMobile ? (
-            <MobileMenu state={state} actions={actions} />
-          ) : (
-            <DesktopMenu
-              state={state}
-              actions={actions}
-            />
-          )}
-        </Flex>
+      {/* Middle Part for question navigation */}
+      <Flex
+        position="absolute"
+        left="50%"
+        transform="translateX(-50%)"
+        align="center"
+      >
+        {/* Question Navigation Input */}
+        <Input
+          type="number"
+          value={state.currentQuestionIndex + 1}
+          onChange={(e) => navigation.handleNavigate('goto', Number(e.target.value))}
+          width="75px"
+          marginRight={2}
+          fontSize="15px"
+          textAlign="center"
+        />
+        <Text marginX={2} fontSize="15px">
+          / {state.filteredQuestions.length}
+        </Text>
       </Flex>
-    );
-  };
 
-  export default QuizHeader;
+      {/* Right Part */}
+      <Flex align="center" gap={2}>
+        {isMobile ? (
+          <MobileMenu 
+            state={{ ...state, isDrawerOpen, iconHoverBg }}
+            actions={{ ...actions, onDrawerOpen, onDrawerClose, toggleColorMode }}
+          />
+        ) : (
+          <DesktopMenu
+            state={state}
+            actions={actions}
+          />
+        )}
+      </Flex>
+    </Flex>
+  );
+};
+
+export default QuizHeader;
