@@ -1,6 +1,6 @@
 // pages/index.tsx
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, ReactNode } from 'react';
 import { 
   Box, 
   Text, 
@@ -16,13 +16,12 @@ import {
   useColorMode
 } from '@chakra-ui/react';
 import { useRouter } from 'next/router';
-import { ChevronRightIcon } from '@chakra-ui/icons';
 import { ArrowRight, BookOpen, Globe, Zap } from "lucide-react";
 import Navbar from '../components/Navbar';
 import LoadingLayout from '../components/LoadingLayout';
 import { getBackendUrl } from '../utils/getBackendUrl';
 import Head from 'next/head';
-import { motion } from 'framer-motion';
+import { motion, Transition } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
 
 const MotionBox = motion(Box);
@@ -30,19 +29,25 @@ const MotionFlex = motion(Flex);
 const MotionVStack = motion(VStack);
 const MotionSimpleGrid = motion(SimpleGrid);
 
-const FadeInWhenVisible = ({ children }) => {
+interface FadeInWhenVisibleProps {
+  children: ReactNode;
+}
+
+const FadeInWhenVisible: React.FC<FadeInWhenVisibleProps> = ({ children }) => {
   const [ref, inView] = useInView({
     triggerOnce: true,
     rootMargin: '-100px 0px',
   });
 
+  const animationProps = {
+    ref,
+    initial: { opacity: 0, y: 50 },
+    animate: inView ? { opacity: 1, y: 0 } : { opacity: 0, y: 50 },
+    transition: { duration: 0.5 } as Transition
+  };
+
   return (
-    <MotionBox
-      ref={ref}
-      initial={{ opacity: 0, y: 50 }}
-      animate={inView ? { opacity: 1, y: 0 } : { opacity: 0, y: 50 }}
-      transition={{ duration: 0.5 }}
-    >
+    <MotionBox {...animationProps}>
       {children}
     </MotionBox>
   );
@@ -96,7 +101,6 @@ export default function HomePage() {
           width="100%" 
           paddingY={["48px", "96px", "128px", "192px"]} 
           backgroundImage={useColorModeValue(gradientLight, gradientDark)}
-          transition="background-image 0.5s ease-in-out"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 1 }}
@@ -147,7 +151,10 @@ export default function HomePage() {
                   onClick={handleDashboardClick}
                   backgroundColor="white"
                   color={useColorModeValue("purple.500", "purple.700")}
-                  _hover={{ backgroundColor: useColorModeValue("gray.100", "gray.700") }}
+                  _hover={{ 
+                    backgroundColor: useColorModeValue("gray.100", "gray.200"),
+                    color: useColorModeValue("purple.600", "purple.800")
+                  }}
                   rightIcon={<ArrowRight />}
                 >
                   {isLoggedIn ? 'Go to Dashboard' : 'Start Preparing Now'}
