@@ -442,7 +442,7 @@ const DynamicQuizTable: React.FC = () => {
               {quizSet.finished ? '100%' : `${quizSet.progress}%`}
             </Text>
           </Box>
-          <Text fontSize="sm" marginTop={1}>
+          <Text fontSize="sm" marginTop={1} textAlign="center">
             {quizSet.unanswered_questions} unanswered q's
           </Text>
         </Flex>
@@ -659,6 +659,7 @@ const DynamicQuizTable: React.FC = () => {
         <>
           <Flex justifyContent="space-between" padding={4}>
             <Button
+              variant="outline"
               colorScheme="red"
               onClick={() => setIsDeleteMultipleAlertOpen(true)}
               isDisabled={!Object.values(checkedItems).some(Boolean)}

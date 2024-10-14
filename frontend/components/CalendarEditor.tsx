@@ -58,17 +58,10 @@ const CalendarEditor: React.FC = () => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  const [isInitialLoad, setIsInitialLoad] = useState<boolean>(true);
   const { colorMode } = useColorMode();
 
   useEffect(() => {
-    const localContent = localStorage.getItem('editorContent');
-    if (localContent) {
-      setEditorContent(localContent);
-      setIsInitialLoad(false);
-    } else {
-      fetchEditorContent();
-    }
+    fetchEditorContent();
   }, [date]);
 
   const fetchEditorContent = () => {
@@ -76,27 +69,20 @@ const CalendarEditor: React.FC = () => {
     setError(null);
     fetchWithAuth(`${backendUrl}/getEditorContent`)
       .then((response) => {
-        if (response.status === 404) {
-          return { content: '' };
-        }
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
         return response.json();
       })
       .then((data) => {
-        setEditorContent(data.content);
-        localStorage.setItem('editorContent', data.content);
+        setEditorContent(data.content || '');
       })
       .catch((error) => {
         console.error('Error fetching editor content:', error);
-        if (!isInitialLoad) {
-          setError('Failed to fetch editor content. Please try again.');
-        }
+        setError('Failed to fetch editor content. Please try again.');
       })
       .finally(() => {
         setIsLoading(false);
-        setIsInitialLoad(false);
       });
   };
 
@@ -134,7 +120,6 @@ const CalendarEditor: React.FC = () => {
   const handleEditorChange = (content: string) => {
     if (content !== undefined) {
       setEditorContent(content);
-      localStorage.setItem('editorContent', content);
       saveEditorContent(content);
     }
   };
@@ -168,7 +153,7 @@ const CalendarEditor: React.FC = () => {
         ) : (
           <>
             {isSaving && <Text fontSize="sm" color="gray.500">Saving...</Text>}
-            {!isInitialLoad && error && <Text color="red.500">{error}</Text>}
+            {error && <Text color="red.500">{error}</Text>}
             <QuillNoSSRWrapper
               theme="snow"
               value={editorContent}

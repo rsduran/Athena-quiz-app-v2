@@ -369,6 +369,9 @@ def update_quiz_set_score(quiz_set_id):
 @app.route('/api/saveEditorContent', methods=['POST'])
 def save_editor_content():
     try:
+        if not g.user:
+            return jsonify({'message': 'Unauthorized'}), 401
+
         data = request.get_json()
         content = data.get('content')
         
@@ -376,11 +379,11 @@ def save_editor_content():
             return jsonify({'message': 'No content provided'}), 400
 
         # Create a new EditorContent object or update an existing one
-        editor_content = EditorContent.query.first()
+        editor_content = EditorContent.query.filter_by(user_id=g.user.id).first()
         if editor_content:
             editor_content.content = content
         else:
-            editor_content = EditorContent(content=content)
+            editor_content = EditorContent(content=content, user_id=g.user.id)
             db.session.add(editor_content)
 
         db.session.commit()
@@ -392,13 +395,15 @@ def save_editor_content():
 
 @app.route('/api/getEditorContent', methods=['GET'])
 def get_editor_content():
-    # For simplicity, retrieving the latest content
-    content = EditorContent.query.order_by(EditorContent.id.desc()).first()
+    if not g.user:
+        return jsonify({'message': 'Unauthorized'}), 401
+
+    content = EditorContent.query.filter_by(user_id=g.user.id).first()
     
     if content:
         return jsonify({"content": content.content}), 200
     else:
-        return jsonify({"message": "No content found"}), 404
+        return jsonify({"content": ""}), 200
 
 @app.route('/api/getEyeIconState/<string:quiz_set_id>', methods=['GET'])
 def get_eye_icon_state(quiz_set_id):
