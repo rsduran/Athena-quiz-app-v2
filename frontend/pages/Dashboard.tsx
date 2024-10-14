@@ -10,6 +10,7 @@ import DynamicQuizTable from '../components/DynamicQuizTable';
 import CountdownTimer from '../components/CountdownTimer';
 import MotivationalQuote from '../components/MotivationalQuote';
 import { getBackendUrl } from '../utils/getBackendUrl';
+import { fetchWithAuth } from '../utils/api';
 
 const Dashboard = () => {
   const [refreshKey, setRefreshKey] = useState(0);
@@ -19,9 +20,7 @@ const Dashboard = () => {
   const checkAuth = useCallback(async () => {
     const backendUrl = getBackendUrl();
     try {
-      const response = await fetch(`${backendUrl}/auth/status`, {
-        credentials: 'include'
-      });
+      const response = await fetchWithAuth(`${backendUrl}/auth/status`);
       const data = await response.json();
       console.log('[DEBUG] Auth status response:', data);
       if (!data.isLoggedIn) {

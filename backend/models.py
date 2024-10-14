@@ -36,6 +36,7 @@ class QuizSet(db.Model):
     sort_order = db.Column(db.String(4), default='desc')
     current_question_index = db.Column(db.Integer, default=0)
     current_filter = db.Column(db.String(20), default='all')
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     
     questions = db.relationship('Question', backref='quiz_set', lazy=True, cascade="all, delete-orphan")
     attempts_list = db.relationship('Attempt', backref='quiz_set', lazy=True, cascade="all, delete-orphan")
@@ -93,6 +94,7 @@ class Question(db.Model):
 class EditorContent(db.Model):
     id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     content = db.Column(db.Text, nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
 
     def __repr__(self):
         return f'<EditorContent {self.id}>'

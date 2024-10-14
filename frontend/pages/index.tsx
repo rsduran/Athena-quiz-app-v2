@@ -24,6 +24,7 @@ import { getBackendUrl } from '../utils/getBackendUrl';
 import Head from 'next/head';
 import { motion, Transition } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
+import { fetchWithAuth } from '../utils/api';
 
 const MotionBox = motion(Box);
 const MotionFlex = motion(Flex);
@@ -63,9 +64,7 @@ export default function HomePage() {
     const checkLoginStatus = async () => {
       const backendUrl = getBackendUrl();
       try {
-        const response = await fetch(`${backendUrl}/auth/status`, {
-          credentials: 'include'
-        });
+        const response = await fetchWithAuth(`${backendUrl}/auth/status`);
         const data = await response.json();
         setIsLoggedIn(data.isLoggedIn);
       } catch (error) {

@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { Box, Button, Textarea, Flex, useToast } from '@chakra-ui/react';
 import { getBackendUrl } from '@/utils/getBackendUrl';
+import { fetchWithAuth } from '@/utils/api';
 
 interface ScrapingSectionProps {
   onScrapeComplete: (success: boolean, quizSetTitle: string) => void;
@@ -75,7 +76,7 @@ const ScrapingSection: React.FC<ScrapingSectionProps> = ({ onScrapeComplete, qui
     console.log("Processed URLs sent to Backend:", JSON.stringify(processedUrls, null, 2));
   
     try {
-      const response = await fetch(`${backendUrl}/startScraping`, {
+      const response = await fetchWithAuth(`${backendUrl}/startScraping`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -123,7 +124,7 @@ const ScrapingSection: React.FC<ScrapingSectionProps> = ({ onScrapeComplete, qui
   const downloadQuizPdf = async (quizSetId: string) => {
     try {
       console.log(`Downloading PDF for quiz set ID: ${quizSetId}`); // Corrected string interpolation
-      const response = await fetch(`${backendUrl}/downloadQuizPdf/${quizSetId}`); // Corrected string interpolation
+      const response = await fetchWithAuth(`${backendUrl}/downloadQuizPdf/${quizSetId}`); // Corrected string interpolation
       const blob = await response.blob();
       const downloadUrl = window.URL.createObjectURL(blob);
       const link = document.createElement('a');

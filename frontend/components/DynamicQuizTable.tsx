@@ -53,6 +53,7 @@ import UrlsModal from '../components/UrlsModal';
 import { getBackendUrl } from '@/utils/getBackendUrl';
 import { QuizSet } from '@/utils/types';
 import QuizTableSkeleton from './QuizTableSkeleton';
+import { fetchWithAuth } from '@/utils/api';
 
 const DynamicQuizTable: React.FC = () => {
   const [quizSets, setQuizSets] = useState<QuizSet[]>([]);
@@ -98,7 +99,7 @@ const DynamicQuizTable: React.FC = () => {
 
   const fetchSortOrder = useCallback(async () => {
     try {
-      const response = await fetch(`${backendUrl}/getSortOrder`);
+      const response = await fetchWithAuth(`${backendUrl}/getSortOrder`);
       if (response.ok) {
         const data = await response.json();
         setSortOrder(data.sortOrder);
@@ -111,13 +112,13 @@ const DynamicQuizTable: React.FC = () => {
   const fetchQuizSets = useCallback(async () => {
     try {
       setIsLoading(true);
-      const response = await fetch(`${backendUrl}/getQuizSets`);
+      const response = await fetchWithAuth(`${backendUrl}/getQuizSets`);
       if (!response.ok) throw new Error('Network response was not ok');
       const quizSetsData: QuizSet[] = await response.json();
       setQuizSetCount(quizSetsData.length);
-
+  
       await new Promise(resolve => setTimeout(resolve, 500));
-
+  
       setQuizSets(quizSetsData);
     } catch (error) {
       console.error('Error fetching quiz sets:', error);
@@ -129,7 +130,7 @@ const DynamicQuizTable: React.FC = () => {
   const handleOpenUrlsModal = useCallback(async (quizSetId: string) => {
     console.log(`Fetching raw URLs for quizSetId: ${quizSetId}`);
     try {
-      const response = await fetch(`${backendUrl}/getRawUrls/${quizSetId}`);
+      const response = await fetchWithAuth(`${backendUrl}/getRawUrls/${quizSetId}`);
       if (!response.ok) throw new Error('Network response was not ok');
       const data = await response.json();
       setSelectedRawUrls(data.rawUrls);
@@ -168,7 +169,7 @@ const DynamicQuizTable: React.FC = () => {
 
   const handleRename = useCallback(async (quizSetId: string, newTitle: string) => {
     try {
-      const response = await fetch(`${backendUrl}/renameQuizSet/${quizSetId}`, {
+      const response = await fetchWithAuth(`${backendUrl}/renameQuizSet/${quizSetId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ new_title: newTitle }),
@@ -201,7 +202,7 @@ const DynamicQuizTable: React.FC = () => {
   const handleDeleteQuizSet = useCallback(async () => {
     if (deleteQuizSetId) {
       try {
-        const response = await fetch(`${backendUrl}/deleteQuizSet/${deleteQuizSetId}`, {
+        const response = await fetchWithAuth(`${backendUrl}/deleteQuizSet/${deleteQuizSetId}`, {
           method: 'DELETE',
         });
         if (response.ok) {
@@ -233,9 +234,9 @@ const DynamicQuizTable: React.FC = () => {
       });
       return;
     }
-
+  
     try {
-      const response = await fetch(`${backendUrl}/deleteMultipleQuizSets`, {
+      const response = await fetchWithAuth(`${backendUrl}/deleteMultipleQuizSets`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ quizSetIds: selectedQuizSetIds }),
@@ -273,7 +274,7 @@ const DynamicQuizTable: React.FC = () => {
 
   const handleDeleteAllQuizSets = useCallback(async () => {
     try {
-      const response = await fetch(`${backendUrl}/deleteAllQuizSets`, {
+      const response = await fetchWithAuth(`${backendUrl}/deleteAllQuizSets`, {
         method: 'POST',
       });
       if (response.ok) {
@@ -306,7 +307,7 @@ const DynamicQuizTable: React.FC = () => {
   const toggleSortOrder = useCallback(async () => {
     const newSortOrder = sortOrder === 'asc' ? 'desc' : 'asc';
     try {
-      const response = await fetch(`${backendUrl}/updateSortOrder`, {
+      const response = await fetchWithAuth(`${backendUrl}/updateSortOrder`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sortOrder: newSortOrder }),

@@ -9,6 +9,7 @@ import debounce from 'lodash/debounce';
 import 'react-quill/dist/quill.snow.css';
 import './custom-quill.css';
 import { getBackendUrl } from '@/utils/getBackendUrl';
+import { fetchWithAuth } from '@/utils/api';
 
 const backendUrl = getBackendUrl();
 
@@ -57,12 +58,14 @@ const CalendarEditor: React.FC = () => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [isInitialLoad, setIsInitialLoad] = useState<boolean>(true);
   const { colorMode } = useColorMode();
 
   useEffect(() => {
     const localContent = localStorage.getItem('editorContent');
     if (localContent) {
       setEditorContent(localContent);
+      setIsInitialLoad(false);
     } else {
       fetchEditorContent();
     }
@@ -71,8 +74,11 @@ const CalendarEditor: React.FC = () => {
   const fetchEditorContent = () => {
     setIsLoading(true);
     setError(null);
-    fetch(`${backendUrl}/getEditorContent`)
+    fetchWithAuth(`${backendUrl}/getEditorContent`)
       .then((response) => {
+        if (response.status === 404) {
+          return { content: '' };
+        }
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
@@ -84,10 +90,13 @@ const CalendarEditor: React.FC = () => {
       })
       .catch((error) => {
         console.error('Error fetching editor content:', error);
-        setError('Failed to fetch editor content. Please try again.');
+        if (!isInitialLoad) {
+          setError('Failed to fetch editor content. Please try again.');
+        }
       })
       .finally(() => {
         setIsLoading(false);
+        setIsInitialLoad(false);
       });
   };
 
@@ -95,7 +104,7 @@ const CalendarEditor: React.FC = () => {
     debounce((content: string) => {
       setIsSaving(true);
       setError(null);
-      fetch(`${backendUrl}/saveEditorContent`, {
+      fetchWithAuth(`${backendUrl}/saveEditorContent`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ content }),
@@ -159,7 +168,7 @@ const CalendarEditor: React.FC = () => {
         ) : (
           <>
             {isSaving && <Text fontSize="sm" color="gray.500">Saving...</Text>}
-            {error && <Text color="red.500">{error}</Text>}
+            {!isInitialLoad && error && <Text color="red.500">{error}</Text>}
             <QuillNoSSRWrapper
               theme="snow"
               value={editorContent}

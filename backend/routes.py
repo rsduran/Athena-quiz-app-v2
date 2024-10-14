@@ -1,12 +1,13 @@
 # routes.py
 
-from app_init import app, db, github  # Absolute imports
-from flask import redirect, url_for, request, jsonify, session, send_file, current_app, make_response
+from app_init import app, oauth, github
+from db import db
+from flask import redirect, url_for, request, jsonify, session, send_file, current_app, make_response, g
 from werkzeug.exceptions import BadRequest
 from authlib.integrations.flask_client import OAuthError
-from models import QuizSet, Question, EditorContent, FurtherExplanation, User  # Absolute imports
-from scraping_helpers import process_question, process_pinoybix_question, process_examveda_question, process_examprimer_question, fetch_discussion_comments  # Absolute imports
-import config  # Absolute imports
+from models import QuizSet, Question, EditorContent, FurtherExplanation, User, Attempt
+from scraping_helpers import process_question, process_pinoybix_question, process_examveda_question, process_examprimer_question, fetch_discussion_comments
+import config
 import random
 from g4f import Provider, models
 from langchain.llms.base import LLM
@@ -17,9 +18,9 @@ from selenium import webdriver
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 from html.parser import HTMLParser
-from models import Attempt
 from datetime import datetime
 from pytz import timezone
+import traceback
 import re
 import io
 import secrets
@@ -55,6 +56,16 @@ def strip_tags(html):
     s.feed(html)
     return s.get_data()
 
+def get_current_user():
+    user_id = session.get('user_id')
+    if user_id:
+        return User.query.get(user_id)
+    return None
+
+@app.before_request
+def before_request():
+    g.user = get_current_user()
+
 @app.route('/api', methods=['GET'])
 def home():
     return {"status": "success", "message": "Your application is running. Use /api/startScraping endpoint to start scraping."}
@@ -65,7 +76,7 @@ def start_scraping():
     quiz_title = data.get('title', 'New Quiz Set')
     raw_urls = data.get('rawUrls', '')
     urls_input = data.get('urls', [])
-    new_quiz_set = QuizSet(title=quiz_title, raw_urls=raw_urls, urls=json.dumps(urls_input))
+    new_quiz_set = QuizSet(title=quiz_title, raw_urls=raw_urls, urls=json.dumps(urls_input), user_id=g.user.id)
     db.session.add(new_quiz_set)
     db.session.commit()
 
@@ -122,7 +133,10 @@ def get_questions_by_quiz_set(quiz_set_id):
 
 @app.route('/api/getQuizSets', methods=['GET'])
 def get_quiz_sets():
-    quiz_sets = QuizSet.query.all()
+    if not g.user:
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    quiz_sets = QuizSet.query.filter_by(user_id=g.user.id).all()
     ph_tz = timezone('Asia/Manila')
     result = []
     for qs in quiz_sets:
@@ -682,110 +696,46 @@ def get_quiz_set_state(quiz_set_id):
 @app.route('/api/auth/github')
 def github_login():
     redirect_uri = url_for('github_authorized', _external=True)
-    state = secrets.token_hex(16)
-    resp = make_response(github.authorize_redirect(redirect_uri=redirect_uri, state=state))
-    resp.set_cookie('oauth_state', state, httponly=True, secure=True, samesite='Lax')
-    return resp
-
-from flask import request, jsonify, make_response, redirect, current_app
-from werkzeug.exceptions import BadRequest
-from authlib.integrations.flask_client import OAuthError
-from models import User
-from db import db
-import traceback
+    return github.authorize_redirect(redirect_uri)
 
 @app.route('/api/auth/github/callback')
 def github_authorized():
     try:
         print("[DEBUG] Entered github_authorized function")
-        
-        # Log all request parameters
         print(f"[DEBUG] Request args: {request.args}")
-        print(f"[DEBUG] Request cookies: {request.cookies}")
         
-        # Verify the state parameter
-        state = request.args.get('state')
-        stored_state = request.cookies.get('oauth_state')
-        if not state:
-            print("[ERROR] No state parameter in request")
-            raise BadRequest("No state parameter provided")
+        token = oauth.github.authorize_access_token()
+        print(f"[DEBUG] Access token obtained: {token is not None}")
         
-        if state != stored_state:
-            print(f"[ERROR] State mismatch. Expected: {stored_state}, Received: {state}")
-            raise BadRequest("Invalid state parameter")
+        resp = oauth.github.get('user', token=token)
+        user_info = resp.json()
+        print(f"[DEBUG] User info obtained: {user_info}")
         
-        print("[DEBUG] State verified successfully")
+        user = User.query.filter_by(github_id=str(user_info['id'])).first()
+        if not user:
+            user = User(
+                github_id=str(user_info['id']),
+                name=user_info['login'],
+                email=user_info.get('email'),
+                avatar_url=user_info['avatar_url']
+            )
+            db.session.add(user)
+        else:
+            user.avatar_url = user_info['avatar_url']
+        
+        db.session.commit()
+        print(f"[DEBUG] User saved/updated in database: {user.id}")
 
-        # Clear the state cookie
-        resp = make_response()
-        resp.delete_cookie('oauth_state')
+        session['user_id'] = user.id
+        session['user_name'] = user.name
+        print("[DEBUG] Session set")
 
-        # Exchange the code for an access token
-        try:
-            token = github.authorize_access_token()
-            print(f"[DEBUG] Access token obtained: {token is not None}")
-        except Exception as token_error:
-            print(f"[ERROR] Failed to obtain access token: {str(token_error)}")
-            raise BadRequest("Failed to obtain access token") from token_error
-
-        if not token:
-            print("[ERROR] No token received from GitHub")
-            raise BadRequest("No token received from GitHub")
-
-        # Fetch user information from GitHub
-        try:
-            resp = github.get('user', token=token)
-            user_info = resp.json()
-            print(f"[DEBUG] User info obtained: {user_info}")
-        except Exception as user_info_error:
-            print(f"[ERROR] Failed to fetch user info: {str(user_info_error)}")
-            raise BadRequest("Failed to fetch user information from GitHub") from user_info_error
-        
-        if 'id' not in user_info:
-            print("[ERROR] User ID not found in GitHub response")
-            raise BadRequest("User ID not found in GitHub response")
-
-        # Find or create the user in the database
-        try:
-            user = User.query.filter_by(github_id=str(user_info['id'])).first()
-            if not user:
-                user = User(
-                    github_id=str(user_info['id']),
-                    name=user_info['login'],
-                    email=user_info.get('email'),
-                    avatar_url=user_info['avatar_url']
-                )
-                db.session.add(user)
-            else:
-                user.avatar_url = user_info['avatar_url']  # Update avatar URL on each login
-            
-            db.session.commit()
-            print(f"[DEBUG] User saved/updated in database: {user.id}")
-        except Exception as db_error:
-            print(f"[ERROR] Database operation failed: {str(db_error)}")
-            db.session.rollback()
-            raise BadRequest("Failed to save user information") from db_error
-        
-        # Set session variables
-        resp.set_cookie('user_id', str(user.id), httponly=True, secure=True, samesite='Lax')
-        resp.set_cookie('user_name', user.name, httponly=True, secure=True, samesite='Lax')
-        resp.set_cookie('user_avatar', user.avatar_url, httponly=True, secure=True, samesite='Lax')
-        print("[DEBUG] Session cookies set")
-        
-        # Redirect to the frontend
-        frontend_url = current_app.config.get('FRONTEND_URL', 'http://k8s-threetie-mainlb-7703746d77-255087660.ap-southeast-2.elb.amazonaws.com')
+        frontend_url = app.config['FRONTEND_URL']
         redirect_url = f"{frontend_url}/Dashboard"
         print(f"[DEBUG] Redirecting to: {redirect_url}")
         return redirect(redirect_url)
-
-    except BadRequest as e:
-        print(f"[ERROR] BadRequest in github_authorized: {str(e)}")
-        return jsonify({"error": str(e)}), 400
-    except OAuthError as e:
-        print(f"[ERROR] OAuthError in github_authorized: {str(e)}")
-        return jsonify({"error": "OAuth error occurred", "details": str(e)}), 401
     except Exception as e:
-        print(f"[ERROR] Unexpected error in github_authorized: {str(e)}")
+        print(f"[ERROR] An error occurred in github_authorized: {str(e)}")
         print(f"[ERROR] Traceback: {traceback.format_exc()}")
         return jsonify({"error": "An unexpected error occurred during authentication", "details": str(e)}), 500
 

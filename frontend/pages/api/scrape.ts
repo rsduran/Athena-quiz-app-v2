@@ -2,13 +2,14 @@
 
 import { getBackendUrl } from '@/utils/getBackendUrl';
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { fetchWithAuth } from '@/utils/api';
 
 const backendUrl = getBackendUrl();
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method === 'POST') {
     try {
-      const response = await fetch(`${backendUrl}/startScraping`, {
+      const response = await fetchWithAuth(`${backendUrl}/startScraping`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(req.body),

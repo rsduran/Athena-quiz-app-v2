@@ -30,6 +30,7 @@ import {
 import { FaGithub, FaLinkedin, FaTwitter } from 'react-icons/fa';
 import { useRouter } from 'next/router';
 import { getBackendUrl } from '../utils/getBackendUrl';
+import { fetchWithAuth } from '@/utils/api';
 
 export default function Navbar() {
   const { colorMode, toggleColorMode } = useColorMode();
@@ -53,7 +54,7 @@ export default function Navbar() {
     const checkLoginStatus = async () => {
       const backendUrl = getBackendUrl();
       try {
-        const response = await fetch(`${backendUrl}/auth/status`, {
+        const response = await fetchWithAuth(`${backendUrl}/auth/status`, {
           credentials: 'include'
         });
         const data = await response.json();
@@ -72,7 +73,7 @@ export default function Navbar() {
   const handleLogout = async () => {
     const backendUrl = getBackendUrl();
     try {
-      await fetch(`${backendUrl}/auth/logout`, { 
+      await fetchWithAuth(`${backendUrl}/auth/logout`, { 
         method: 'POST',
         credentials: 'include'
       });

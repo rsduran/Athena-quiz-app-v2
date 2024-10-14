@@ -3,6 +3,7 @@ import { useRouter } from 'next/router';
 import { useToast, useColorMode, useColorModeValue, useDisclosure, useBreakpointValue } from '@chakra-ui/react';
 import { getBackendUrl } from '@/utils/getBackendUrl';
 import { Question } from '@/utils/types';
+import { fetchWithAuth } from '@/utils/api';
 
 interface QuestionData {
   id: number;
@@ -126,7 +127,7 @@ const useQuizState = () => {
     console.log("Confirming shuffle questions...");
     try {
       console.log("Before fetching shuffled questions");
-      const shuffledResponse = await fetch(`${backendUrl}/shuffleQuestions/${id}`, { method: 'POST' });
+      const shuffledResponse = await fetchWithAuth(`${backendUrl}/shuffleQuestions/${id}`, { method: 'POST' });
       if (!shuffledResponse.ok) throw new Error('Error shuffling questions');
 
       let shuffledQuestionsData = await shuffledResponse.json();
@@ -182,7 +183,7 @@ const useQuizState = () => {
 
   const fetchUserSelections = async () => {
     try {
-      const response = await fetch(`${backendUrl}/getUserSelections/${id}`);
+      const response = await fetchWithAuth(`${backendUrl}/getUserSelections/${id}`);
       if (!response.ok) throw new Error('Network response was not ok');
       const selections = await response.json();
       setQuestions((previousQuestions) => previousQuestions.map((question) => ({
@@ -197,7 +198,7 @@ const useQuizState = () => {
   const fetchQuestionsAndUpdateSelections = async () => {
     console.log("Fetching questions...");
     try {
-      const response = await fetch(`${backendUrl}/getQuestionsByQuizSet/${id}`);
+      const response = await fetchWithAuth(`${backendUrl}/getQuestionsByQuizSet/${id}`);
       if (!response.ok) throw new Error('Network response was not ok');
       let data = await response.json();
 
@@ -229,7 +230,7 @@ const useQuizState = () => {
   const fetchEyeIconState = useCallback(async () => {
     if (!id) return;
     try {
-      const response = await fetch(`${backendUrl}/getEyeIconState/${id}`);
+      const response = await fetchWithAuth(`${backendUrl}/getEyeIconState/${id}`);
       if (!response.ok) throw new Error('Failed to fetch eye icon state');
       const data = await response.json();
       setEyeIconState(data.state);
@@ -241,7 +242,7 @@ const useQuizState = () => {
 
   const fetchFavorites = async () => {
     try {
-      const response = await fetch(`${backendUrl}/getFavorites/${id}`);
+      const response = await fetchWithAuth(`${backendUrl}/getFavorites/${id}`);
       if (!response.ok) throw new Error('Network response was not ok');
       const favoritedQuestions = await response.json();
       setFavorites(new Set(favoritedQuestions.map((question: { id: number }) => question.id)));
@@ -251,7 +252,7 @@ const useQuizState = () => {
   };
 
   const handleToggleFavorites = (questionId: number) => {
-    fetch(`${backendUrl}/toggleFavorite`, {
+    fetchWithAuth(`${backendUrl}/toggleFavorite`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ question_id: questionId })
@@ -290,7 +291,7 @@ const useQuizState = () => {
   const fetchCurrentQuestionIndex = useCallback(async () => {
     if (id) {
       try {
-        const response = await fetch(`${backendUrl}/getCurrentQuestionIndex/${id}`);
+        const response = await fetchWithAuth(`${backendUrl}/getCurrentQuestionIndex/${id}`);
         if (response.ok) {
           const data = await response.json();
           setCurrentQuestionIndex(data.current_question_index);
@@ -304,7 +305,7 @@ const useQuizState = () => {
   const updateCurrentQuestionIndex = useCallback(async (index: number) => {
     if (id) {
       try {
-        await fetch(`${backendUrl}/updateCurrentQuestionIndex/${id}`, {
+        await fetchWithAuth(`${backendUrl}/updateCurrentQuestionIndex/${id}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ index }),
@@ -322,7 +323,7 @@ const useQuizState = () => {
   const fetchQuizSetState = useCallback(async () => {
     if (id) {
       try {
-        const response = await fetch(`${backendUrl}/getQuizSetState/${id}`);
+        const response = await fetchWithAuth(`${backendUrl}/getQuizSetState/${id}`);
         if (response.ok) {
           const data = await response.json();
           setCurrentQuestionIndex(data.current_question_index);
@@ -337,7 +338,7 @@ const useQuizState = () => {
   const updateQuizSetState = useCallback(async (index: number, filter: string) => {
     if (id) {
       try {
-        await fetch(`${backendUrl}/updateQuizSetState/${id}`, {
+        await fetchWithAuth(`${backendUrl}/updateQuizSetState/${id}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ index, filter }),
@@ -384,7 +385,7 @@ const useQuizState = () => {
       await updateScore(questionId, decrement);
     }
 
-    await fetch(`${backendUrl}/updateUserSelection`, {
+    await fetchWithAuth(`${backendUrl}/updateUserSelection`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ question_id: questionId, selected_option: selectedOption })
@@ -399,7 +400,7 @@ const useQuizState = () => {
   };
 
   const updateScore = async (questionId: number, scoreChange: number) => {
-    await fetch(`${backendUrl}/updateScore`, {
+    await fetchWithAuth(`${backendUrl}/updateScore`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ question_id: questionId, increment: scoreChange, quiz_set_id: id })
@@ -444,7 +445,7 @@ const useQuizState = () => {
 
   const updateQuizSetStatus = async (status: string) => {
     try {
-      await fetch(`${backendUrl}/updateQuizSetStatus/${id}`, {
+      await fetchWithAuth(`${backendUrl}/updateQuizSetStatus/${id}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status })
@@ -455,7 +456,7 @@ const useQuizState = () => {
   };
 
   const updateScoreInDatabase = (score: number) => {
-    fetch(`${backendUrl}/updateQuizSetScore/${id}`, {
+    fetchWithAuth(`${backendUrl}/updateQuizSetScore/${id}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ score })
@@ -501,7 +502,7 @@ const useQuizState = () => {
   const handleReset = async () => {
     console.log("Initiating reset");
     try {
-      const response = await fetch(`${backendUrl}/resetQuestions/${id}`, {
+      const response = await fetchWithAuth(`${backendUrl}/resetQuestions/${id}`, {
         method: 'POST'
       });
       if (!response.ok) throw new Error('Network response was not ok');
@@ -530,7 +531,7 @@ const useQuizState = () => {
     if (!id) return;
     const newState = !eyeIconState;
     try {
-      const response = await fetch(`${backendUrl}/updateEyeIconState/${id}`, {
+      const response = await fetchWithAuth(`${backendUrl}/updateEyeIconState/${id}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ state: newState })
@@ -577,7 +578,7 @@ const useQuizState = () => {
     const score = correctAnswers;
 
     try {
-      await fetch(`${backendUrl}/updateQuizSetScore/${id}`, {
+      await fetchWithAuth(`${backendUrl}/updateQuizSetScore/${id}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ score }),

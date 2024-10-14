@@ -10,6 +10,7 @@ import { PlusIcon, ExitIcon } from '@radix-ui/react-icons';
 import { useRouter } from 'next/router';
 import QuizSetModal from './QuizSetModal';
 import { getBackendUrl } from '../utils/getBackendUrl';
+import { fetchWithAuth } from '../utils/api';
 
 interface DashboardNavbarProps {
   onAddNewQuizSet: (newQuizSetTitle: string) => void;
@@ -26,7 +27,7 @@ export default function DashboardNavbar({ onAddNewQuizSet }: DashboardNavbarProp
     const fetchUserData = async () => {
       const backendUrl = getBackendUrl();
       try {
-        const response = await fetch(`${backendUrl}/auth/status`, { credentials: 'include' });
+        const response = await fetchWithAuth(`${backendUrl}/auth/status`);
         const data = await response.json();
         if (data.isLoggedIn) {
           setUserName(data.username);
@@ -44,7 +45,7 @@ export default function DashboardNavbar({ onAddNewQuizSet }: DashboardNavbarProp
   const handleLogout = async () => {
     const backendUrl = getBackendUrl();
     try {
-      await fetch(`${backendUrl}/auth/logout`, { method: 'POST', credentials: 'include' });
+      await fetchWithAuth(`${backendUrl}/auth/logout`, { method: 'POST' });
       window.location.href = '/';
     } catch (error) {
       console.error('Error logging out:', error);
