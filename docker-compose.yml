@@ -4,13 +4,16 @@ services:
   db:
     image: postgres:13
     environment:
-      POSTGRES_DB: quizdb
-      POSTGRES_USER: my_user
-      POSTGRES_PASSWORD: password
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASS}
     volumes:
       - db-data:/var/lib/postgresql/data
+      - ./init-scripts:/docker-entrypoint-initdb.d
+    ports:
+      - "5433:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U my_user -d quizdb"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -23,14 +26,14 @@ services:
       db:
         condition: service_healthy
     environment:
-      FLASK_ENV: production
+      FLASK_ENV: ${FLASK_ENV}
       DB_HOST: db
-      DB_NAME: quizdb
-      DB_USER: my_user
-      DB_PASS: password
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASS: ${DB_PASS}
       GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID}
       GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET}
-      FRONTEND_URL: http://localhost:3000
+      FRONTEND_URL: ${FRONTEND_URL}
     ports:
       - "5000:5000"
 
@@ -39,12 +42,12 @@ services:
       context: ./frontend
       dockerfile: Dockerfile.frontend
       args:
-        NEXT_PUBLIC_BACKEND_URL: http://localhost:5000/api
-        NEXT_PUBLIC_ENV: production
+        NEXT_PUBLIC_BACKEND_URL: ${NEXT_PUBLIC_BACKEND_URL}
+        NEXT_PUBLIC_ENV: ${NEXT_PUBLIC_ENV}
     ports:
       - "3000:3000"
     environment:
-      NEXT_PUBLIC_BASE_URL: http://localhost:3000
+      NEXT_PUBLIC_BASE_URL: ${NEXT_PUBLIC_BASE_URL}
     depends_on:
       - backend
 

@@ -40,7 +40,7 @@ logger.info(f"Database URI: postgresql://{DB_USER}:{'*' * len(DB_PASS)}@{DB_HOST
 init_db(app)
 
 # Configure CORS
-CORS(app, resources={r"/api/*": {"origins": "http://localhost:3000"}}, supports_credentials=True)
+CORS(app, resources={r"/api/*": {"origins": os.getenv('FRONTEND_URL', 'http://localhost:3000')}}, supports_credentials=True)
 logger.info("CORS configured")
 
 # Configure OAuth
